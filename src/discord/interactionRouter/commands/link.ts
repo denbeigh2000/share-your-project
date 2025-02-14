@@ -1,0 +1,45 @@
+import {
+    APIChatInputApplicationCommandGuildInteraction,
+    APIInteractionResponse,
+    InteractionResponseType,
+    MessageFlags,
+    RESTPostAPIChatInputApplicationCommandsJSONBody,
+} from "discord-api-types/v10";
+
+import { Env } from "../../../env";
+import { Sentry } from "../../../sentry";
+import { BotClient } from "../../client/bot";
+import { StateStore } from "../../../stateStore";
+
+export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
+    name: "link",
+    description: "Link your Discord account to a Github user or org.",
+};
+
+export const handler = async (
+    _c: BotClient,
+    interaction: APIChatInputApplicationCommandGuildInteraction,
+    env: Env,
+    _s: Sentry,
+): Promise<(APIInteractionResponse | null)> => {
+    const userId = interaction.member.user.id;
+
+    const stateStore = new StateStore(env.OAUTH);
+
+    const { state, expiration } = await stateStore.put(userId);
+    const url = `https://github.com/login/oauth/authorize?client_id=${env.GITHUB_CLIENT_ID}&state=${state}`;
+    return {
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: {
+            content: `
+<@${userId}>: Click [here](${url}) to link your Discord account to a Github org.
+
+This link expires at <t:${expiration}:f> (<t:${expiration}:R>).
+
+**This is a private link, and shouldn't be shared**.
+            `,
+            flags: MessageFlags.Ephemeral,
+        },
+    }
+}
+
