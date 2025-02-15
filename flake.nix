@@ -9,15 +9,18 @@
       let
         pkgs = import nixpkgs { inherit system; };
         inherit (pkgs.nodePackages) pnpm;
+        inherit (pkgs) cloudflared;
       in
       {
-        devShells.default = pkgs.mkShell {
-          packages = [ pnpm ];
+        devShells. default = pkgs.mkShell {
+          packages = [ pnpm cloudflared ];
           shellHook = ''
             if ! [[ -e node_modules ]]
             then
               ${pnpm}/bin/pnpm install
             fi
+
+            export PATH="$PWD/node_modules/.bin:$PATH"
           '';
         };
       });
