@@ -1,7 +1,9 @@
-import { GREEN, GREY, RED, YELLOW, ellipsis, getAuthor } from "./embeds";
+import { EmitterWebhookEvent } from "@octokit/webhooks";
+import { GREEN, GREY, RED, YELLOW, ellipsis, formatSimpleUser, unknownUser } from "./embeds";
 
-import { PullRequestEvent } from "@octokit/webhooks-types";
 import { APIEmbed } from "discord-api-types/v10";
+
+type PullRequestEvent = EmitterWebhookEvent<"pull_request">["payload"];
 
 const MAX_PR_LENGTH = 800;
 
@@ -60,7 +62,7 @@ const formatPR = (event: PullRequestEvent, adjective: string, color: number): AP
         : (pull_request.body || "");
 
     return {
-        author: getAuthor(event.sender),
+        author: event.sender ? formatSimpleUser(event.sender) : unknownUser,
         title: `[${repository.full_name}] Pull request ${adjective}: ${title}`,
         url: pull_request.url,
         color,

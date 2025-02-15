@@ -6,7 +6,6 @@ import { Store } from "../../store";
 import { BotClient } from "../../discord/client";
 
 import handlePush from "../../github/discord/push";
-import { PushEvent } from "@octokit/webhooks-types";
 import { getBranchName, isBranch } from "../../github/discord/embeds";
 
 export async function handler(
@@ -41,7 +40,7 @@ export async function handler(
             env.PUBLISH_CHANNEL_ID,
             {
                 // TODO: confirm correct
-                embeds: [handlePush(payload as PushEvent)],
+                embeds: [handlePush(payload)],
             }
         );
     });

@@ -1,5 +1,5 @@
-import { User } from "@octokit/webhooks-types";
 import { APIEmbedAuthor } from "discord-api-types/v10";
+import { EmitterWebhookEvent } from "@octokit/webhooks";
 
 export const COMMIT_DISPLAY_LENGTH = 7;
 
@@ -23,13 +23,39 @@ export const GREY_LIGHT = 16382715;
 export const BRANCH_PREFIX = "refs/heads/";
 export const TAG_PREFIX = "refs/tags/";
 
-export const getAuthor = (author: User): APIEmbedAuthor => {
-    return {
-        name: author.name ? author.name : author.login,
-        url: author.url,
-        icon_url: author.avatar_url,
-    };
+type PushPayload = EmitterWebhookEvent<"push">["payload"]
+type DeletePayload = EmitterWebhookEvent<"delete">["payload"]
+
+type Committer = PushPayload["pusher"];
+type User = NonNullable<PushPayload["repository"]["owner"]>;
+type SimpleUser = DeletePayload["sender"];
+
+export const formatCommitter = (author: Committer): APIEmbedAuthor => {
+    const name = author.username || author.name;
+    const url = author.username ? `https://github.com/${author.username}` : undefined;
+
+    return { name, url };
+};
+
+export const formatUser = (author: User): APIEmbedAuthor => {
+    const name = author.name || author.login;
+    const url = author.html_url || `https://github.com/${author.login}`;
+    const icon_url = author.avatar_url || undefined;
+
+    return { name, url, icon_url };
+};
+
+export const formatSimpleUser = (user: SimpleUser): APIEmbedAuthor => {
+    const name = user.name || user.login;
+    const url = user.html_url;
+    const icon_url = user.avatar_url;
+
+    return { name, url, icon_url };
 }
+
+export const unknownUser: APIEmbedAuthor = {
+    name: "[Unknown user]",
+};
 
 export const isTag = (ref: string) => ref.startsWith(TAG_PREFIX);
 export const isBranch = (ref: string) => ref.startsWith(BRANCH_PREFIX);

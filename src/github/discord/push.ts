@@ -1,10 +1,11 @@
+import { BRANCH_PREFIX, COMMIT_DISPLAY_LENGTH, GREY_LIGHT, RED, ellipsis, formatCommitter, formatSimpleUser, formatUser } from "./embeds";
 
-import { BRANCH_PREFIX, COMMIT_DISPLAY_LENGTH, GREY_LIGHT, RED, ellipsis, getAuthor } from "./embeds";
-
-import { PushEvent } from "@octokit/webhooks-types";
 import { APIEmbed } from "discord-api-types/v10";
+import { EmitterWebhookEvent } from "@octokit/webhooks";
 
 const COMMIT_MESSAGE_LEN = 68;
+
+type PushEvent = EmitterWebhookEvent<"push">["payload"];
 
 const title = (event: PushEvent): string => {
     if (!event.ref.startsWith(BRANCH_PREFIX)) {
@@ -41,8 +42,11 @@ const content = (event: PushEvent): string => {
 }
 
 export default (event: PushEvent): APIEmbed => {
+    const author = event.sender
+        ? formatSimpleUser(event.sender)
+        : formatCommitter(event.pusher);
     return {
-        author: getAuthor(event.sender),
+        author,
         title: title(event),
         url: event.head_commit ? event.head_commit.url : event.repository.url,
         color: event.forced ? RED : GREY_LIGHT,

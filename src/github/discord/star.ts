@@ -1,7 +1,9 @@
-import { RED, YELLOW, getAuthor } from "./embeds";
+import { EmitterWebhookEvent } from "@octokit/webhooks";
+import { RED, YELLOW, formatCommitter } from "./embeds";
 
-import { StarEvent } from "@octokit/webhooks-types";
 import { APIEmbed } from "discord-api-types/v10";
+
+type StarEvent = EmitterWebhookEvent<"star">["payload"];
 
 export default (event: StarEvent): APIEmbed => {
     let color: number;
@@ -19,7 +21,7 @@ export default (event: StarEvent): APIEmbed => {
     }
 
     return {
-        author: getAuthor(event.sender),
+        author: formatCommitter(event.sender),
         title,
         thumbnail: {
             url: event.sender.avatar_url,
