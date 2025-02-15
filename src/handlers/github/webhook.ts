@@ -7,6 +7,7 @@ import { BotClient } from "../../discord/client";
 
 import handlePush from "../../github/discord/push";
 import { getBranchName, isBranch } from "../../github/discord/embeds";
+import { formatReleaseEvent } from "../../github/discord/releases";
 
 export async function handler(
     request: Request,
@@ -39,7 +40,6 @@ export async function handler(
         client.createMessage(
             env.PUBLISH_CHANNEL_ID,
             {
-                // TODO: confirm correct
                 embeds: [handlePush(payload)],
             }
         );
@@ -53,8 +53,7 @@ export async function handler(
         client.createMessage(
             env.PUBLISH_CHANNEL_ID,
             {
-                // TODO: need to create proper release embed
-                content: "new release!",
+                embeds: [formatReleaseEvent(payload)],
             }
         );
     });
