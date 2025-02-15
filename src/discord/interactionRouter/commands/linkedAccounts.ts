@@ -7,7 +7,6 @@ import {
 } from "discord-api-types/v10";
 
 import { Env } from "../../../env";
-import { Sentry } from "../../../sentry";
 import { BotClient } from "../../client/bot";
 import { Store } from "../../../store";
 import { Octokit } from "octokit";
@@ -27,7 +26,6 @@ export const handler = async (
     _c: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-    _s: Sentry,
 ): Promise<(APIInteractionResponse | null)> => {
 
     const userId = interaction.member.user.id;
@@ -49,21 +47,24 @@ export const handler = async (
 
     let content;
     switch (ents.length) {
-        case 0:
+        case 0: {
             content = "No linked accounts found. Run `/setup` to get started";
             break;
+        }
 
-        case 1:
+        case 1: {
             const e = ents[0];
             content = `Found one linked ${e.type}: ${formatOrg(e)}`;
             break;
+        }
 
-        default:
+        default: {
             const entityMessage = ents.map(e => `- ${formatOrg(e)} (${e.type})`).join("\n");
             content = `
 ${ents.length} linked accounts:
 ${entityMessage}
 `;
+        }
     }
 
     return {

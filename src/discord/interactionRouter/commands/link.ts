@@ -7,7 +7,6 @@ import {
 } from "discord-api-types/v10";
 
 import { Env } from "../../../env";
-import { Sentry } from "../../../sentry";
 import { BotClient } from "../../client/bot";
 import { StateStore } from "../../../stateStore";
 
@@ -20,7 +19,6 @@ export const handler = async (
     _c: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-    _s: Sentry,
 ): Promise<(APIInteractionResponse | null)> => {
     const userId = interaction.member.user.id;
 

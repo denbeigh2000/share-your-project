@@ -1,6 +1,6 @@
 import { Endpoints } from "@octokit/types";
 
-import { APIApplicationCommandInteractionDataOption, ApplicationCommandOptionType, InteractionResponseType, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+import { APIApplicationCommandInteractionDataOption, ApplicationCommandOptionType, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
 import { Entity, Store } from "../../../../store";
 import { Env } from "../../../../env";
 import { Octokit } from "octokit";

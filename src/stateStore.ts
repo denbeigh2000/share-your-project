@@ -2,6 +2,10 @@ import { KVNamespace } from "@cloudflare/workers-types";
 
 const DEFAULT_EXPIRATION_TTL = 60 * 15;  // 15 minutes;
 
+interface Data {
+    discordID: string,
+}
+
 function generateState(): string {
     const seed = new Uint8Array(16);
     crypto.getRandomValues(seed);
@@ -38,7 +42,7 @@ export class StateStore {
     }
 
     async get(state: string): Promise<string | null> {
-        const result = await this.kv.get(state, { type: "json" }) as any;
+        const result = await this.kv.get<Data>(state, { type: "json" });
         if (!result)
             return null;
 

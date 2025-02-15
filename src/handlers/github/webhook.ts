@@ -16,7 +16,7 @@ export async function handler(
     sentry: Sentry
 ) {
     sentry.setExtras({
-        type: "github-wevhooks",
+        type: "github-webhooks",
     });
 
     const webhooks = new Webhooks({

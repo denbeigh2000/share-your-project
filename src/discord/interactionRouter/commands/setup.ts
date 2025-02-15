@@ -7,7 +7,6 @@ import {
 } from "discord-api-types/v10";
 
 import { Env } from "../../../env";
-import { Sentry } from "../../../sentry";
 import { BotClient } from "../../client/bot";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
@@ -19,7 +18,6 @@ export const handler = async (
     _c: BotClient,
     _i: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-    _s: Sentry,
 ): Promise<(APIInteractionResponse | null)> => {
     return {
         type: InteractionResponseType.ChannelMessageWithSource,

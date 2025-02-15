@@ -84,7 +84,7 @@ function formatCommand(cmd: RESTPostAPIChatInputApplicationCommandsJSONBody): In
         for (let i = 0; i < cmd.options.length; i++) {
             const opt = cmd.options[i];
             switch (opt.type) {
-                case ApplicationCommandOptionType.SubcommandGroup:
+                case ApplicationCommandOptionType.SubcommandGroup: {
                     // SubcommandGroups may generate more than one line
                     // (groupName ...)
                     // (groupName cmd1 opt1:<..> [opt2:<..>])
@@ -96,19 +96,22 @@ function formatCommand(cmd: RESTPostAPIChatInputApplicationCommandsJSONBody): In
                     });
                     lines.push.apply(subcGroupLines);
                     break;
-                case ApplicationCommandOptionType.Subcommand:
+                }
+                case ApplicationCommandOptionType.Subcommand: {
                     // Subcommand will generate exactly one line
                     // (subcommandName opt1:<..> [opt2:<..>])
                     const partialLine = formatSubcommand(opt as APIApplicationCommandSubcommandOption);
                     const line = [...tokens, ...partialLine.tokens]
                     lines.push({ ...partialLine, tokens: line });
                     break;
-                default:
+                }
+                default: {
                     // NOTE: doing this in a loop and mutating shared state will
                     // allow us to specify required options before subcommands
                     // (though i'm not sure if that's actually supported?)
                     const basicCmd = formatBasicOption(opt as APIApplicationCommandBasicOption);
                     tokens.push(basicCmd)
+                }
             }
         }
     }

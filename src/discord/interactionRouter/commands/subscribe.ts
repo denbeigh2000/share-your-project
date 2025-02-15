@@ -8,7 +8,6 @@ import {
 } from "discord-api-types/v10";
 
 import { Env } from "../../../env";
-import { Sentry } from "../../../sentry";
 import { BotClient } from "../../client/bot";
 import { Store } from "../../../store";
 import { commonOptions, getEntityAndRepo, getOpts } from "./subunsub/util";
@@ -31,7 +30,6 @@ export const handler = async (
     _c: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-    _s: Sentry,
 ): Promise<(APIInteractionResponse | null)> => {
     const store = new Store(env.USER_DB);
 

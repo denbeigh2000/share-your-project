@@ -1,4 +1,4 @@
-import { BRANCH_PREFIX, COMMIT_DISPLAY_LENGTH, GREY_LIGHT, RED, ellipsis, formatCommitter, formatSimpleUser, formatUser } from "./embeds";
+import { BRANCH_PREFIX, COMMIT_DISPLAY_LENGTH, GREY_LIGHT, RED, ellipsis, formatCommitter, formatSimpleUser } from "./embeds";
 
 import { APIEmbed } from "discord-api-types/v10";
 import { EmitterWebhookEvent } from "@octokit/webhooks";

@@ -21,11 +21,11 @@ export class Client {
                     this.sentry.captureMessage(`${resp.status} from Discord`, "warning");
                 }
 
-                // CF Workers refer to MDN documentation for their implementation of fetch,
-                // and @discordjs/rest says makeRequest is supposed to support global fetch,
-                // even though typescript gives warnings about non-overlapping response
+                // @ts-expect-error CF Workers refer to MDN documentation for
+                // their implementation of fetch, and @discordjs/rest says
+                // makeRequest is supposed to support global fetch, even though
+                // typescript gives warnings about non-overlapping response
                 // types, soooooo I don't really see the harm of just casting here
-                // @ts-ignore
                 return resp as ResponseLike;
             },
         });

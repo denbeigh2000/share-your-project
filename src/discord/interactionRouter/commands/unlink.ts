@@ -1,5 +1,4 @@
 import { APIChatInputApplicationCommandGuildInteraction, APIInteractionResponse, ApplicationCommandOptionType, InteractionResponseType, MessageFlags, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
-import { Sentry } from "../../../sentry";
 import { Env } from "../../../env";
 import { Store } from "../../../store";
 import { Octokit } from "octokit";
@@ -22,7 +21,6 @@ export const handler = async (
     _c: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-    _s: Sentry,
 ): Promise<(APIInteractionResponse | null)> => {
     const userId = interaction.member.user.id;
     const store = new Store(env.USER_DB);

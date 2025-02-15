@@ -5,8 +5,9 @@ import { formatUser } from "./util";
 
 export interface BuildkiteErrorShape {
     message: string,
-    errors: any[],
+    errors: any[],  // eslint-disable-line @typescript-eslint/no-explicit-any
 }
+
 
 export class Sentry extends Toucan {
     constructor(request: Request, env: Env, context: ExecutionContext) {
@@ -42,7 +43,7 @@ export class Sentry extends Toucan {
 
     public setFromDiscordInteraction(interaction: APIInteraction) {
         const guildID = interaction.guild_id || null;
-        const tags: any = {
+        const tags: any = { // eslint-disable-line @typescript-eslint/no-explicit-any
             isDM: !guildID,
             guildID,
             interactionType: interaction.type,
@@ -71,7 +72,7 @@ export class Sentry extends Toucan {
         this.setTags(tags);
     }
 
-    public breadcrumbFromHTTP(category: string, url: string, response: Response, extra?: any) {
+    public breadcrumbFromHTTP(category: string, url: string, response: Response, extra?: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
         const level = response.status >= 400 ? "error" : "info";
         this.addBreadcrumb({
             type: "webRequest",
