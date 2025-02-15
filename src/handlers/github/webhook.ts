@@ -5,6 +5,10 @@ import { Env } from "../../env";
 import { Store } from "../../store";
 import { BotClient } from "../../discord/client";
 
+import handlePush from "../../github/discord/push";
+import { PushEvent } from "@octokit/webhooks-types";
+import { getBranchName, isBranch } from "../../github/discord/embeds";
+
 export async function handler(
     request: Request,
     env: Env,
@@ -23,18 +27,21 @@ export async function handler(
     const client = new BotClient(env.BOT_TOKEN, sentry);
 
     webhooks.on("push", async ({ payload }) => {
-        const sub = await store.findSub(payload.repository.id);
+        const { repository, ref } = payload;
+
+        const sub = await store.findSub(repository.id);
         if (!sub)
             return;
 
-        if (sub.isDefaultBranchOnly && payload.ref !== `refs/heads/${sub.defaultBranch}`)
+        const { isDefaultBranchOnly, defaultBranch } = sub;
+        if (isBranch(ref) && isDefaultBranchOnly && getBranchName(ref) !== defaultBranch)
             return;
 
         client.createMessage(
             env.PUBLISH_CHANNEL_ID,
             {
-                // TODO: make embeds etc
-                content: "new commits!",
+                // TODO: confirm correct
+                embeds: [handlePush(payload as PushEvent)],
             }
         );
     });
@@ -47,6 +54,7 @@ export async function handler(
         client.createMessage(
             env.PUBLISH_CHANNEL_ID,
             {
+                // TODO: need to create proper release embed
                 content: "new release!",
             }
         );
