@@ -1,4 +1,4 @@
-store.
+const GITHUB_ENTITIES_TABLE = "github_entities";
 const LINK_TABLE = "github_to_discord";
 const SUBSCRIPTIONS_TABLE = "repo_subscriptions";
 

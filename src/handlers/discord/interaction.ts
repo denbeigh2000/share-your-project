@@ -1,7 +1,7 @@
 import verify from "../../discord/verify";
 import { Env } from "../../env";
 import { Sentry } from "../../sentry";
-import { DEFAULT_HEADERS, returnJSON, returnStatus } from "../../util/http";
+import { returnJSON, returnStatus } from "../../util/http";
 import { getRouter } from "../../discord/interactionRouter/registry";
 
 export async function handler(
@@ -16,7 +16,6 @@ export async function handler(
             "my mother taught me never to talk to strangers",
             {
                 status: 401,
-                headers: DEFAULT_HEADERS,
             }
         );
     }

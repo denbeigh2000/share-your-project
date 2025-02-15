@@ -1,16 +1,5 @@
-import { serialize as serializeCookie } from "cookie";
-
-const A_LONG_TIME_AGO = new Date(0);
-const OLD_AUTH_HEADER = "auth";
-
-// NOTE: explicit type is required so TS is okay with this type
-export const DEFAULT_HEADERS: [string, string][] = [
-    ["Set-Cookie", serializeCookie(OLD_AUTH_HEADER, "deleted", { expires: A_LONG_TIME_AGO })]
-];
-
 export function returnStatus(status: number, body: string): Response {
-    const headers = new Headers(DEFAULT_HEADERS);
-    return new Response(`${body}\n`, { status, headers });
+    return new Response(`${body}\n`, { status });
 }
 
 export function respond400(): Response {
@@ -18,7 +7,7 @@ export function respond400(): Response {
 }
 
 export function respondNotFound(): Response {
-    return returnStatus(418, "get lost");
+    return returnStatus(404, "Not found");
 }
 
 export function returnTODO(): Response {
@@ -29,7 +18,6 @@ export function returnJSON(data: object): Response {
     return new Response(JSON.stringify(data), {
         headers: [
             ["Content-Type", "application/json"],
-            ...DEFAULT_HEADERS
         ],
     });
 }

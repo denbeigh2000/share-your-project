@@ -1,8 +1,5 @@
-
-// TODO: Migrate this and BotClient to use @discordjs/rest (need to figure out how to do the
-
 import { ResponseLike, REST } from "@discordjs/rest";
-import { Sentry } from "@bot/sentry";
+import { Sentry } from "../../sentry";
 
 // different authentication types
 export class Client {

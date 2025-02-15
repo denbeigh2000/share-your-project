@@ -18,6 +18,7 @@
     "wrangler": "^3.109.1"
   },
   "dependencies": {
+    "@discordjs/rest": "^2.4.3",
     "@octokit/auth-app": "^7.1.5",
     "@octokit/auth-oauth-user": "^5.1.3",
     "@octokit/webhooks": "^13.6.1",

@@ -48,7 +48,7 @@ import {
 } from "discord-api-types/rest/v10/guild";
 
 import { Client } from "./base";
-import { Sentry } from "@bot/sentry";
+import { Sentry } from "../../sentry";
 
 export class BotClient extends Client {
     constructor(token: string, sentry: Sentry) {
