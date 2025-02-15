@@ -8,7 +8,6 @@ export interface BuildkiteErrorShape {
     errors: any[],  // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
-
 export class Sentry extends Toucan {
     constructor(request: Request, env: Env, context: ExecutionContext) {
         const allowedHeaders = ["X-GitHub-Event", "X-GitHub-Hook-ID", "User-Agent"]
