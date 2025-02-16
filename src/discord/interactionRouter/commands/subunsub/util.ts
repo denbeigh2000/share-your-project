@@ -73,12 +73,14 @@ export interface Opts {
     owner: string,
     repoName: string,
     defaultBranchOnly: boolean,
+    quiet: boolean,
 }
 
 export function getOpts(data: APIApplicationCommandInteractionDataOption[]): Opts {
     let owner: string | null = null;
     let repo: string | null = null;
     let defaultBranchOnly = true;
+    let quiet = false;
 
     for (let i = 0; i < data.length; i++) {
         const datum = data[i];
@@ -101,6 +103,12 @@ export function getOpts(data: APIApplicationCommandInteractionDataOption[]): Opt
                 defaultBranchOnly = datum.value;
                 break;
 
+            case "quiet":
+                if (datum.type !== ApplicationCommandOptionType.Boolean)
+                    throw `bad data type for quiet ${datum.type}`;
+                quiet = datum.value;
+                break;
+
             default:
                 throw `unknown option ${datum.name} (type ${datum.type})`;
         }
@@ -109,6 +117,6 @@ export function getOpts(data: APIApplicationCommandInteractionDataOption[]): Opt
     if (!owner) throw "`owner` not provided";
     if (!repo) throw "`repo` not provided";
 
-    return { owner, repoName: repo, defaultBranchOnly };
+    return { owner, repoName: repo, defaultBranchOnly, quiet };
 }
 

@@ -25,6 +25,12 @@ export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
             type: ApplicationCommandOptionType.Boolean,
             description: "If provided and false, show commit pushes from non-default branches",
         },
+        {
+            name: "quiet",
+            required: false,
+            type: ApplicationCommandOptionType.Boolean,
+            description: "If provided and true, will not publish a message about subscription",
+        },
     ],
 };
 
@@ -43,11 +49,15 @@ const handleInner = async (
     const { owner, repoName, defaultBranchOnly } = getOpts(options);
 
     let msg: RESTPatchAPIInteractionFollowupJSONBody;
+    let entity, repo;
+    let successful = false;
     try {
-        const { entity, repo } = await getEntityAndRepo(env, store, owner, repoName, member.user.id);
+        const data = await getEntityAndRepo(env, store, owner, repoName, member.user.id);
+        entity = data.entity;
+        repo = data.repo;
 
         await store.upsertSub(repo.id, entity.githubID, repo.default_branch, defaultBranchOnly);
-        // TODO: design embeds etc
+        successful = true;
         msg = {
             content: `OK, updates from ${owner}/${repoName} will be sent to <#${env.PUBLISH_CHANNEL_ID}>`,
         };
@@ -60,6 +70,12 @@ const handleInner = async (
 
     const { application_id: applicationId, token } = interaction;
     await client.editFollowup(applicationId, token, msg);
+    if (repo && successful)
+        await client.createMessage(env.PUBLISH_CHANNEL_ID, {
+            content: `
+<@${interaction.member.user.id}> has started publishing updates from [${repo.name}](${repo.html_url})! :balloon:
+`,
+        });
 }
 
 export const handler = async (
