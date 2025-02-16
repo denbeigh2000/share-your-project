@@ -7,7 +7,7 @@ import { getRouter } from "../../discord/interactionRouter/registry";
 export async function handler(
     request: Request,
     env: Env,
-    _ctx: ExecutionContext,
+    ctx: ExecutionContext,
     sentry: Sentry
 ) {
     const body = await request.text();
@@ -27,7 +27,7 @@ export async function handler(
     });
 
     const router = getRouter(env, sentry);
-    const resp = await router.handle(interaction);
+    const resp = await router.handle(ctx, interaction);
     if (!resp) {
         return returnStatus(204, "");
     }

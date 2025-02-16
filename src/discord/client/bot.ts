@@ -49,6 +49,7 @@ import {
 
 import { Client } from "./base";
 import { Sentry } from "../../sentry";
+import { RESTGetAPIInteractionFollowupResult } from "discord-api-types/v9";
 
 export class BotClient extends Client {
     constructor(token: string, sentry: Sentry) {
@@ -214,6 +215,14 @@ export class BotClient extends Client {
     ): Promise<APIMessage> {
         const route = Routes.webhookMessage(applicationId, interactionToken, "@original");
         return await this.rest.patch(route, { body }) as RESTPatchAPIInteractionFollowupResult;
+    }
+
+    public async getFollowup(
+        applicationId: Snowflake,
+        interactionToken: string,
+    ): Promise<APIMessage> {
+        const route = Routes.webhookMessage(applicationId, interactionToken, "@original");
+        return await this.rest.get(route) as RESTGetAPIInteractionFollowupResult;
     }
 
     public async registerCommand(

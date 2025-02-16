@@ -22,8 +22,8 @@ import { Env } from "../../env";
 import { BotClient } from "../client/bot";
 import { formatCommandSet } from "./help";
 
-type CommandFn = (c: BotClient, i: APIChatInputApplicationCommandGuildInteraction, e: Env, s: Sentry) => Promise<APIInteractionResponse | null>;
-type ComponentFn = (c: BotClient, i: APIMessageComponentGuildInteraction, e: Env, s: Sentry) => Promise<void>;
+type CommandFn = (x: ExecutionContext, c: BotClient, i: APIChatInputApplicationCommandGuildInteraction, e: Env, s: Sentry) => Promise<APIInteractionResponse | null>;
+type ComponentFn = (x: ExecutionContext, c: BotClient, i: APIMessageComponentGuildInteraction, e: Env, s: Sentry) => Promise<void>;
 
 const HelpCommandDesc: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "help",
@@ -63,7 +63,7 @@ export class InteractionRouter {
         ];
     }
 
-    public async handle(interaction: APIInteraction): Promise<APIInteractionResponse | null> {
+    public async handle(ctx: ExecutionContext, interaction: APIInteraction): Promise<APIInteractionResponse | null> {
         if (interaction.type === InteractionType.Ping) {
             return { type: InteractionResponseType.Pong };
         }
@@ -76,7 +76,7 @@ export class InteractionRouter {
             const customId = interaction.data.custom_id;
             const [action] = customId.split("_", 1);
 
-            await this.components.handle(action, interaction)
+            await this.components.handle(ctx, action, interaction)
             return { type: InteractionResponseType.DeferredMessageUpdate };
         }
 
@@ -94,7 +94,7 @@ export class InteractionRouter {
                 return this.handleHelp();
             }
 
-            const resp = await this.commands.handle(name, interaction);
+            const resp = await this.commands.handle(ctx, name, interaction);
             if (resp === "missing") {
                 throw `TODO: missing for ${name}`;
             }
@@ -120,7 +120,7 @@ export class InteractionRouter {
     }
 }
 
-export type AsyncHandler<In extends APIGuildInteraction, Out> = (c: BotClient, i: In, e: Env, s: Sentry) => Promise<Out>;
+export type AsyncHandler<In extends APIGuildInteraction, Out> = (x: ExecutionContext, c: BotClient, i: In, e: Env, s: Sentry) => Promise<Out>;
 
 export class Subrouter<In extends APIGuildInteraction, Out> {
     NOUN: string;
@@ -142,7 +142,7 @@ export class Subrouter<In extends APIGuildInteraction, Out> {
         this.handlers[key] = h;
     }
 
-    public async handle(key: string, interaction: In): Promise<Out | "missing"> {
+    public async handle(ctx: ExecutionContext, key: string, interaction: In): Promise<Out | "missing"> {
         const handler = this.handlers[key];
         if (!handler) {
             this.sentry.captureMessage("missing interaction handler", "warning", {
@@ -156,7 +156,7 @@ export class Subrouter<In extends APIGuildInteraction, Out> {
         }
 
         const client = new BotClient(this.env.BOT_TOKEN, this.sentry);
-        return await handler(client, interaction, this.env, this.sentry);
+        return await handler(ctx, client, interaction, this.env, this.sentry);
     }
 }
 

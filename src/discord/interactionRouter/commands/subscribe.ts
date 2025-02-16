@@ -4,6 +4,7 @@ import {
     ApplicationCommandOptionType,
     InteractionResponseType,
     MessageFlags,
+    RESTPatchAPIInteractionFollowupJSONBody,
     RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 
@@ -27,11 +28,11 @@ export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     ],
 };
 
-export const handler = async (
-    _c: BotClient,
+const handleInner = async (
+    client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-): Promise<(APIInteractionResponse | null)> => {
+): Promise<void> => {
     const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
     const store = new Store(env.USER_DB, key);
 
@@ -41,27 +42,35 @@ export const handler = async (
     if (!options) throw "missing options";
     const { owner, repoName, defaultBranchOnly } = getOpts(options);
 
+    let msg: RESTPatchAPIInteractionFollowupJSONBody;
     try {
         const { entity, repo } = await getEntityAndRepo(env, store, owner, repoName, member.user.id);
 
         await store.upsertSub(repo.id, entity.githubID, repo.default_branch, defaultBranchOnly);
-
         // TODO: design embeds etc
-        return {
-            type: InteractionResponseType.ChannelMessageWithSource,
-            data: {
-                content: `OK, updates from ${owner}/${repoName} will be sent to <#${env.PUBLISH_CHANNEL_ID}>`,
-                flags: MessageFlags.Ephemeral,
-            }
+        msg = {
+            content: `OK, updates from ${owner}/${repoName} will be sent to <#${env.PUBLISH_CHANNEL_ID}>`,
         };
     } catch (e) {
-        return {
-            type: InteractionResponseType.ChannelMessageWithSource,
-            data: {
-                content: (e as string) || "an unknown error occurred",
-                flags: MessageFlags.Ephemeral & MessageFlags.Urgent,
-            },
+        const errorMsg = (e as string) || "an unknown error occurred";
+        msg = {
+            content: `Failed to subscribe: ${errorMsg}`,
         };
     }
 
+    const { application_id: applicationId, token } = interaction;
+    await client.editFollowup(applicationId, token, msg);
+}
+
+export const handler = async (
+    ctx: ExecutionContext,
+    client: BotClient,
+    interaction: APIChatInputApplicationCommandGuildInteraction,
+    env: Env,
+): Promise<(APIInteractionResponse | null)> => {
+    ctx.waitUntil(handleInner(client, interaction, env));
+    return {
+        type: InteractionResponseType.DeferredChannelMessageWithSource,
+        data: { flags: MessageFlags.Ephemeral },
+    };
 }

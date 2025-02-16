@@ -19,6 +19,7 @@ export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
 };
 
 export const handler = async (
+    _ctx: ExecutionContext,
     _c: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
