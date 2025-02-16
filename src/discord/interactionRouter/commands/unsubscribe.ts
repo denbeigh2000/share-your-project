@@ -44,7 +44,7 @@ const handleInner = async (
     } catch (e) {
         const errorMsg = (e as string) || "an unknown error occurred";
         msg = {
-            content: `Failed to subscribe: ${errorMsg}`,
+            content: `Failed to unsubscribe: ${errorMsg}`,
         };
     }
 

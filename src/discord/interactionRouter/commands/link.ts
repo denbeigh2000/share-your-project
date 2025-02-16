@@ -37,7 +37,7 @@ This link expires at <t:${expiration}:f> (<t:${expiration}:R>).
 
 **This is a private link, and shouldn't be shared**.
             `,
-            flags: MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral & MessageFlags.SuppressEmbeds,
         },
     }
 }

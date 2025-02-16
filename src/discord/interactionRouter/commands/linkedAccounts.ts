@@ -3,7 +3,6 @@ import {
     APIInteractionResponse,
     InteractionResponseType,
     MessageFlags,
-    RESTPatchAPIInteractionFollowupJSONBody,
     RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 
@@ -26,7 +25,7 @@ function formatOrg(user: Endpoints["GET /user"]["response"]["data"]): string {
 }
 
 const handleInner = async (
-    client: BotClient,
+    _client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
 ): Promise<string> => {
@@ -95,7 +94,7 @@ export const handler = async (
         try {
             content = await handleInner(client, interaction, env);
         } catch (e) {
-            content = "error displaying linked accounts: {e}";
+            content = `error displaying linked accounts: ${e}`;
         }
 
         const { application_id: applicationId, token } = interaction;
@@ -105,6 +104,6 @@ export const handler = async (
     ctx.waitUntil(callback());
     return {
         type: InteractionResponseType.DeferredChannelMessageWithSource,
-        data: { flags: MessageFlags.Ephemeral },
+        data: { flags: MessageFlags.Ephemeral & MessageFlags.SuppressEmbeds },
     }
 }

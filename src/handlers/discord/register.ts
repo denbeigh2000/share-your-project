@@ -1,7 +1,6 @@
-import verify from "../../discord/verify";
 import { Env } from "../../env";
 import { Sentry } from "../../sentry";
-import { returnJSON, returnStatus } from "../../util/http";
+import { returnStatus } from "../../util/http";
 import { getRouter } from "../../discord/interactionRouter/registry";
 import { BotClient } from "../../discord/client/bot";
 
