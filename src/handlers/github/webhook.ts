@@ -40,7 +40,7 @@ export async function handler(
         if (isBranch(ref) && isDefaultBranchOnly && getBranchName(ref) !== defaultBranch)
             return;
 
-        client.createMessage(
+        await client.createMessage(
             env.PUBLISH_CHANNEL_ID,
             {
                 embeds: [handlePush(payload)],

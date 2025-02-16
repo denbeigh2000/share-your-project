@@ -60,8 +60,8 @@ export const unknownUser: APIEmbedAuthor = {
 export const isTag = (ref: string) => ref.startsWith(TAG_PREFIX);
 export const isBranch = (ref: string) => ref.startsWith(BRANCH_PREFIX);
 
-export const getTagName = (ref: string) => ref.substring(0, TAG_PREFIX.length);
-export const getBranchName = (ref: string) => ref.substring(0, BRANCH_PREFIX.length);
+export const getTagName = (ref: string) => ref.substring(TAG_PREFIX.length);
+export const getBranchName = (ref: string) => ref.substring(BRANCH_PREFIX.length);
 
 export interface RefInfo {
     thing: "tag" | "branch",
