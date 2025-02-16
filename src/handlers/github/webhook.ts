@@ -10,6 +10,7 @@ import { getBranchName, isBranch } from "../../github/discord/embeds";
 import { formatReleaseEvent } from "../../github/discord/releases";
 import { returnStatus } from "../../util/http";
 import { importOauthKey } from "../../encrypter";
+import { MessageFlags } from "discord-api-types/v10";
 
 export async function handler(
     request: Request,
@@ -44,6 +45,8 @@ export async function handler(
             env.PUBLISH_CHANNEL_ID,
             {
                 embeds: [handlePush(payload)],
+                allowed_mentions: [],
+                flags: MessageFlags.SuppressEmbeds,
             }
         );
     });
@@ -57,6 +60,8 @@ export async function handler(
             env.PUBLISH_CHANNEL_ID,
             {
                 embeds: [formatReleaseEvent(payload)],
+                allowed_mentions: [],
+                flags: MessageFlags.SuppressEmbeds,
             }
         );
     });
