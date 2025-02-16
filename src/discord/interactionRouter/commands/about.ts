@@ -11,7 +11,7 @@ import { BotClient } from "../../client";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "about",
-    description: "What this is, ",
+    description: "What this is, how to use it, FAQ.",
 };
 
 
@@ -20,14 +20,13 @@ function blurb(env: Env): string {
 # About me
 I am the **Share Your Project bot**.
 
-You can tell me to watch Github projects you own, and I'll post in ${env.PUBLISH_CHANNEL_ID} on new commits, tags or releases!
-
-Tell me about all your cool projects you want people to know about! :smile:
+Tell me about the Github projects you want people to know about, I'll post in <#${env.PUBLISH_CHANNEL_ID}> when there are new commits, tags or releases! :smile:
 
 # What do?
+To get started follow these steps:
 - Install the Github App [here](${getInviteLink(env.GITHUB_APPLICATION_NAME)})
-- Confirm ownership of your Github ID by running \`/link\`
-- Tell me to subscribe to repos by running \`/subscribe\`
+- Run \`/link\` to confirm ownership of your Github user
+- Run \`/subscribe\` to add your first project! :tada:
 
 # FAQ
 **Why would I want to do this?**
@@ -35,8 +34,8 @@ You have a project that you're working on that you're proud of, that you'd like 
 
 **Why do I have to authorise a Github application with read access?**
 For two reasons:
-- Github will send me webhooks for your repositories when you push updates.
-- I can verify you own the Github account you're publishing from by sending you a unique link in Discord.
+- :envelope: Github will send me an event when you push updates.
+- :white_check_mark: I can verify you own the Github account you're publishing from by sending you a unique link in Discord.
 
 Github will show you a prompt to select which repos I can see before you grant me any access, so you can keep your sensitive repos to yourself :zipper_mouth_face:
 
@@ -58,11 +57,13 @@ export const handler = async (
     _c: BotClient,
     _i: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-): Promise<(APIInteractionResponse | null)> => {
+): Promise<APIInteractionResponse> => {
     return {
         type: InteractionResponseType.ChannelMessageWithSource,
         data: {
-            flags: MessageFlags.Ephemeral & MessageFlags.SuppressEmbeds,
+            // NOTE: cannot suppress embeds *and* keep the response ephemeral,
+            // apparently.
+            flags: MessageFlags.Ephemeral,
             content: blurb(env),
         },
     };
