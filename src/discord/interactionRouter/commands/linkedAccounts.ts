@@ -11,6 +11,8 @@ import { BotClient } from "../../client/bot";
 import { Store } from "../../../store";
 import { Octokit } from "octokit";
 import { Endpoints } from "@octokit/types";
+import { importOauthKey } from "../../../encrypter";
+import { createOAuthUserAuth } from "@octokit/auth-app";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "linked-accounts",
@@ -29,7 +31,8 @@ export const handler = async (
 ): Promise<(APIInteractionResponse | null)> => {
 
     const userId = interaction.member.user.id;
-    const store = new Store(env.USER_DB);
+    const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
+    const store = new Store(env.USER_DB, key);
     const entities = await store.findEntities(userId);
 
     const appId = env.GITHUB_APP_ID;
@@ -38,7 +41,17 @@ export const handler = async (
     const ents = [];
     for (const ent of entities) {
         const installationId = ent.githubInstallationID;
-        const octokit = new Octokit({ appId, privateKey, installationId });
+        const token = ent.oauthToken;
+        const octokit = new Octokit({
+            authStrategy: createOAuthUserAuth,
+            auth: {
+                appId,
+                privateKey,
+                installationId,
+                token,
+                type: "oauth-user",
+            },
+        });
         const { status, data } = await octokit.request("GET /user");
         // TODO: improve 4xx/5xx handling
         if (status !== 200) throw `bad status ${status}`;

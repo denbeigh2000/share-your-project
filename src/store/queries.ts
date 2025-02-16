@@ -3,7 +3,7 @@ const LINK_TABLE = "github_to_discord";
 const SUBSCRIPTIONS_TABLE = "repo_subscriptions";
 
 export const findSubForRepo = `
-    SELECT (default_branch, is_default_branch_only)
+    SELECT default_branch, is_default_branch_only
     FROM ${SUBSCRIPTIONS_TABLE}
     WHERE repo_id = ?;
 `;
@@ -20,7 +20,7 @@ export const upsertGithubEntity = `
 `;
 
 export const selectGHEntitiesForDiscordUser = `
-    SELECT (link.github_id, link.discord_id, gh.installation_id)
+    SELECT link.github_id, link.discord_id, gh.installation_id, gh.encrypted_token, gh.token_iv
     FROM ${LINK_TABLE} AS link
     JOIN ${GITHUB_ENTITIES_TABLE} AS gh
         ON (gh.id = link.github_id)
@@ -29,8 +29,10 @@ export const selectGHEntitiesForDiscordUser = `
 
 export interface GHEntityResult {
     github_id: number,
-    github_installation_id: number,
+    installation_id: number,
     discord_id: string,
+    encrypted_token: Uint8Array,
+    token_iv: Uint8Array,
 }
 
 // TODO: on conflict?
@@ -45,11 +47,20 @@ export const deleteSubscription = `
 `;
 
 export const addInstallation = `
-    INSERT INTO ${GITHUB_ENTITIES_TABLE} (id, installation_id)
-    VALUES (?, ?);
+    INSERT INTO ${GITHUB_ENTITIES_TABLE} (id, installation_id, encrypted_token, token_iv)
+    VALUES (?, ?, NULL, NULL);
 `;
 
 export const deleteInstallation = `
     DELETE FROM ${GITHUB_ENTITIES_TABLE}
     WHERE installation_id = ?;
+`;
+
+export const updateKey = `
+    UPDATE ${GITHUB_ENTITIES_TABLE}
+    SET
+        encrypted_token = ?,
+        token_iv = ?
+    WHERE
+        id = ?;
 `;

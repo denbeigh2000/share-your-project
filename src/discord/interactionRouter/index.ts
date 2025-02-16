@@ -1,5 +1,6 @@
 import {
     APIChatInputApplicationCommandGuildInteraction,
+    APIGuildInteraction,
     APIInteraction,
     APIInteractionResponse,
     APIInteractionResponseChannelMessageWithSource,
@@ -119,9 +120,9 @@ export class InteractionRouter {
     }
 }
 
-export type AsyncHandler<In, Out> = (c: BotClient, i: In, e: Env, s: Sentry) => Promise<Out>;
+export type AsyncHandler<In extends APIGuildInteraction, Out> = (c: BotClient, i: In, e: Env, s: Sentry) => Promise<Out>;
 
-export class Subrouter<In, Out> {
+export class Subrouter<In extends APIGuildInteraction, Out> {
     NOUN: string;
     handlers: Record<string, AsyncHandler<In, Out>>;
     env: Env;

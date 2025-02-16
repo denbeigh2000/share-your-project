@@ -10,6 +10,7 @@ import { Env } from "../../../env";
 import { BotClient } from "../../client/bot";
 import { Store } from "../../../store";
 import { commonOptions, getEntityAndRepo, getOpts } from "./subunsub/util";
+import { importOauthKey } from "../../../encrypter";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "unsubscribe",
@@ -22,7 +23,8 @@ export const handler = async (
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
 ): Promise<(APIInteractionResponse | null)> => {
-    const store = new Store(env.USER_DB);
+    const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
+    const store = new Store(env.USER_DB, key);
 
     const { member } = interaction;
 

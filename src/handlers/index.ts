@@ -3,6 +3,7 @@ import { Env } from "../env";
 import { Sentry } from "../sentry";
 import { respondNotFound } from "../util/http";
 import { handler as handleDiscordInteraction } from "./discord/interaction";
+import { handler as handleDiscordRegister } from "./discord/register";
 import { handler as handleGithubWebhook } from "./github/webhook";
 import { handler as handleGithubPostauth } from "./github/postauth";
 
@@ -10,6 +11,7 @@ type RequestType = [Env, ExecutionContext, Sentry];
 
 export const router = Router<IRequest, RequestType>()
     .post("/discord/interaction", handleDiscordInteraction)
+    .get("/discord/register", handleDiscordRegister)
     .post("/github/webhook", handleGithubWebhook)
     .get("/github/postauth", handleGithubPostauth)
     .all("*", respondNotFound);

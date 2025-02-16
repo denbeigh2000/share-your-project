@@ -1,9 +1,11 @@
-import { addInstallation, addSubscription, deleteInstallation, deleteSubscription, findSubForRepo, GHEntityResult, selectGHEntitiesForDiscordUser, SubResult, upsertGithubEntity } from "./queries";
+import { Encrypter, iv } from "../encrypter";
+import { addInstallation, addSubscription, deleteInstallation, deleteSubscription, findSubForRepo, GHEntityResult, selectGHEntitiesForDiscordUser, SubResult, updateKey, upsertGithubEntity } from "./queries";
 
 export interface Entity {
     discordID: string,
     githubID: number,
     githubInstallationID: number,
+    oauthToken: string | null,
 }
 
 export interface Subscription {
@@ -14,9 +16,11 @@ export interface Subscription {
 
 export class Store {
     db: D1Database
+    encrypter: Encrypter
 
-    constructor(db: D1Database) {
+    constructor(db: D1Database, key: CryptoKey) {
         this.db = db;
+        this.encrypter = new Encrypter(key);
     }
 
     async upsertEntity(githubID: number, discordID: string): Promise<void> {
@@ -37,13 +41,27 @@ export class Store {
         if (!results || !results[0])
             return [];
 
-        return results.map(r => {
-            return {
+        const items = [];
+        for (let i = 0; i < results.length; i++) {
+            const r = results[i];
+            let oauthToken = null;
+            if (r.encrypted_token && r.token_iv) {
+                const encrypted = new Uint8Array(r.encrypted_token);
+                const iv = new Uint8Array(r.token_iv);
+                oauthToken = await this.encrypter.decrypt(encrypted, iv);
+            }
+
+            items.push({
                 discordID,
                 githubID: r.github_id,
-                githubInstallationID: r.github_installation_id,
-            };
-        });
+                githubInstallationID: r.installation_id,
+                oauthToken,
+            });
+        }
+
+        console.log(items);
+
+        return items;
     }
 
     async upsertSub(
@@ -103,5 +121,13 @@ export class Store {
         const { error } = await stmt.run();
         if (error)
             throw error;
+    }
+
+    async updateCode(ghUserId: number, token: string): Promise<void> {
+        const iv_ = iv();
+        const encryptedToken = await this.encrypter.encrypt(iv_, token);
+        const stmt = this.db.prepare(updateKey).bind(encryptedToken, iv_, ghUserId);
+        const { error } = await stmt.run();
+        if (error) throw error;
     }
 }

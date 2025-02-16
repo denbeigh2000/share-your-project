@@ -9,6 +9,7 @@ export default {
         try {
             return await router.fetch(request, env, ctx, sentry);
         } catch (e) {
+            console.error("error:", e);
             sentry.captureException(e);
             return returnStatus(500, "Internal Error");
         }

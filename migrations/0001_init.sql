@@ -2,7 +2,9 @@
 
 CREATE TABLE github_entities (
     id              INTEGER PRIMARY KEY,
-    installation_id INTEGER
+    installation_id INTEGER,
+    encrypted_token BLOB,
+    token_iv        BLOB
 );
 
 CREATE INDEX idx_github_entities_installation_id
@@ -17,7 +19,7 @@ CREATE TABLE github_to_discord (
 
     CONSTRAINT fk_github_to_discord_github_entities_id
         FOREIGN KEY (github_id)
-            REFERENCES (github_entities) id
+            REFERENCES github_entities (id)
             ON DELETE CASCADE
 );
 

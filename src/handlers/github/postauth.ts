@@ -6,6 +6,7 @@ import { returnStatus } from "../../util/http";
 
 import { createOAuthUserAuth } from "@octokit/auth-oauth-user";
 import { StateStore } from "../../stateStore";
+import { importOauthKey } from "../../encrypter";
 
 export async function handler(
     request: Request,
@@ -18,29 +19,52 @@ export async function handler(
     });
 
     const url = new URL(request.url);
-    if (!url.searchParams.has("state") || !url.searchParams.has("code")) {
-        return new Response("It is now safe to close this window");
-    }
+    const state = url.searchParams.get("state") || undefined;
+    const code = url.searchParams.get("code");
+    const installationId = url.searchParams.get("installation_id");
 
-    const state = url.searchParams.get("state")!;
-    const code = url.searchParams.get("code")!;
+    if (!code)
+        return returnStatus(400, "Bad request");
 
-    const stateStore = new StateStore(env.OAUTH);
-    const discordID = await stateStore.get(state);
-    if (!discordID)
+    let discordID = undefined;
+    if (state) {
+        // This is a discord account link
+        const stateStore = new StateStore(env.OAUTH);
+        discordID = await stateStore.get(state);
+        if (!discordID)
+            return returnStatus(400, "Error");
+    } else if (!installationId)
         return returnStatus(400, "Error");
+
+    const auth = createOAuthUserAuth({
+        clientId: env.GITHUB_CLIENT_ID,
+        clientSecret: env.GITHUB_CLIENT_SECRET,
+        code,
+        state,
+    });
+    const { token } = await auth();
 
     const octokit = new Octokit({
         authStrategy: createOAuthUserAuth,
         auth: {
-            clientId: env.GITHUB_CLIENT_ID,
+            clientId: env.CLIENT_ID,
             clientSecret: env.GITHUB_CLIENT_SECRET,
-            code,
-            state,
+            token,
+            clientType: "oauth-app",
         },
     });
 
     const { data: userData } = await octokit.request("GET /user");
-    const store = new Store(env.USER_DB);
-    await store.upsertEntity(userData.id, discordID);
+    const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
+    const store = new Store(env.USER_DB, key);
+    if (discordID) {
+        await store.upsertEntity(userData.id, discordID);
+        await store.updateCode(userData.id, token);
+    } else {
+        // NOTE: we already confirmed installationId was truthy above, in the
+        // else block after confirming the state
+        await store.updateCode(userData.id, token);
+    }
+
+    return returnStatus(200, "OK");
 }

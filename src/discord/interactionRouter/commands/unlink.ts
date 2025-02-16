@@ -3,6 +3,7 @@ import { Env } from "../../../env";
 import { Store } from "../../../store";
 import { Octokit } from "octokit";
 import { BotClient } from "../../client/bot";
+import { importOauthKey } from "../../../encrypter";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "unlink",
@@ -23,7 +24,8 @@ export const handler = async (
     env: Env,
 ): Promise<(APIInteractionResponse | null)> => {
     const userId = interaction.member.user.id;
-    const store = new Store(env.USER_DB);
+    const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
+    const store = new Store(env.USER_DB, key);
     const entities = await store.findEntities(userId);
 
     const appId = env.GITHUB_APP_ID;

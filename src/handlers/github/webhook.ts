@@ -8,6 +8,8 @@ import { BotClient } from "../../discord/client";
 import handlePush from "../../github/discord/push";
 import { getBranchName, isBranch } from "../../github/discord/embeds";
 import { formatReleaseEvent } from "../../github/discord/releases";
+import { returnStatus } from "../../util/http";
+import { importOauthKey } from "../../encrypter";
 
 export async function handler(
     request: Request,
@@ -23,7 +25,8 @@ export async function handler(
         secret: env.GITHUB_WEBHOOK_SECRET,
     });
 
-    const store = new Store(env.USER_DB);
+    const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
+    const store = new Store(env.USER_DB, key);
     const client = new BotClient(env.BOT_TOKEN, sentry);
 
     webhooks.on("push", async ({ payload }) => {
@@ -68,9 +71,11 @@ export async function handler(
     });
 
     await webhooks.verifyAndReceive({
-        id: request.headers.get("x-request-id")!,
-        name: request.headers.get("x-request-event")!,
-        signature: request.headers.get("x-hub-signature")!,
+        id: request.headers.get("x-github-hook-id")!,
+        name: request.headers.get("x-github-event")!,
+        signature: request.headers.get("x-hub-signature-256")!,
         payload: await request.text(),
     });
+
+    return returnStatus(200, 'OK');
 }
