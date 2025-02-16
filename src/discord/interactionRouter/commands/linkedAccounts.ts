@@ -104,6 +104,6 @@ export const handler = async (
     ctx.waitUntil(callback());
     return {
         type: InteractionResponseType.DeferredChannelMessageWithSource,
-        data: { flags: MessageFlags.Ephemeral & MessageFlags.SuppressEmbeds },
+        data: { flags: MessageFlags.Ephemeral },
     }
 }

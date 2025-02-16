@@ -45,8 +45,7 @@ export async function handler(
             env.PUBLISH_CHANNEL_ID,
             {
                 embeds: [handlePush(payload)],
-                allowed_mentions: [],
-                flags: MessageFlags.SuppressEmbeds,
+                allowed_mentions: { parse: [] },
             }
         );
     });
@@ -60,8 +59,7 @@ export async function handler(
             env.PUBLISH_CHANNEL_ID,
             {
                 embeds: [formatReleaseEvent(payload)],
-                allowed_mentions: [],
-                flags: MessageFlags.SuppressEmbeds,
+                allowed_mentions: { parse: [] },
             }
         );
     });
