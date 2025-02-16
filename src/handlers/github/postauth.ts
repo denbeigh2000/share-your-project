@@ -60,11 +60,12 @@ export async function handler(
     if (discordID) {
         await store.upsertEntity(userData.id, discordID);
         await store.updateCode(userData.id, token);
+        return returnStatus(200, "Discord account linked, you can now share projects");
     } else {
         // NOTE: we already confirmed installationId was truthy above, in the
         // else block after confirming the state
         await store.updateCode(userData.id, token);
+        return returnStatus(200, "Github application installed, you can now link your Discord account");
     }
 
-    return returnStatus(200, "OK");
 }
