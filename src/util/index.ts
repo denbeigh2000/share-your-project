@@ -15,3 +15,7 @@ export function formatUser(user: APIUser): string {
         ? user.username
         : `${user.username}#${user.discriminator}`;
 }
+
+export function getInviteLink(appName: string): string {
+    return `https://github.com/apps/${appName}`;
+}
