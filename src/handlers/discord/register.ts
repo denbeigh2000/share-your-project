@@ -10,6 +10,13 @@ export async function handler(
     _ctx: ExecutionContext,
     sentry: Sentry
 ) {
+    if (!env.REGISTER_PRE_SHARED_KEY)
+        return returnStatus(500, "Error");
+
+    if (request.headers.get("Authorization") !== env.REGISTER_PRE_SHARED_KEY) {
+        return returnStatus(401, "Unauthorised");
+    }
+
     const router = getRouter(env, sentry);
     const client = new BotClient(env.BOT_TOKEN, sentry);
 

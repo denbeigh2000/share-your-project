@@ -23,4 +23,5 @@ export interface Env {
     ENVIRONMENT: string;
 
     OAUTH_ENCRYPTION_KEY: string;
+    REGISTER_PRE_SHARED_KEY: string;
 }
