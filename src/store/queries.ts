@@ -3,13 +3,12 @@ const OAUTH_GRANTS_TABLE = "oauth_grants";
 const INSTALLATIONS_TABLE = "app_installations";
 
 export const findSubForRepo = `
-    SELECT default_branch, is_default_branch_only
+    SELECT is_default_branch_only
     FROM ${SUBSCRIPTIONS_TABLE}
     WHERE repo_id = ?;
 `;
 
 export interface SubResult {
-    default_branch: string,
     is_default_branch_only: boolean,
 }
 
@@ -55,7 +54,7 @@ export const selectOauthGrantsForDiscordUser = `
 // TODO: on conflict?
 export const addSubscription = `
     INSERT INTO ${SUBSCRIPTIONS_TABLE}
-    (repo_id, owner_gh_id, default_branch, is_default_branch_only)
+    (repo_id, owner_gh_id, is_default_branch_only)
     VALUES (?, ?, ?, ?);
 `;
 

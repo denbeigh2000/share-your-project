@@ -26,7 +26,6 @@ export interface Installation {
 
 export interface Subscription {
     repoID: number,
-    defaultBranch: string,
     isDefaultBranchOnly: boolean,
 }
 
@@ -74,12 +73,11 @@ export class Store {
     async upsertSub(
         repoID: number,
         ownerID: number,
-        defaultBranch: string,
         isDefaultBranchOnly: boolean
     ): Promise<void> {
         const stmt = this.db
             .prepare(addSubscription)
-            .bind(repoID, ownerID, defaultBranch, isDefaultBranchOnly);
+            .bind(repoID, ownerID, isDefaultBranchOnly);
 
         const { error } = await stmt.run();
         if (error)
@@ -95,7 +93,6 @@ export class Store {
 
         return {
             repoID,
-            defaultBranch: result.default_branch,
             isDefaultBranchOnly: result.is_default_branch_only,
         };
     }

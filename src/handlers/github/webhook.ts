@@ -30,13 +30,19 @@ export async function handler(
     const client = new BotClient(env.BOT_TOKEN, sentry);
 
     webhooks.on("push", async ({ payload }) => {
-        const { repository, ref } = payload;
+        const {
+            ref,
+            repository: {
+                id: repoId,
+                default_branch: defaultBranch
+            }
+        } = payload;
 
-        const sub = await store.findSub(repository.id);
+        const sub = await store.findSub(repoId);
         if (!sub)
             return;
 
-        const { isDefaultBranchOnly, defaultBranch } = sub;
+        const { isDefaultBranchOnly } = sub;
         if (isBranch(ref) && isDefaultBranchOnly && getBranchName(ref) !== defaultBranch)
             return;
 
