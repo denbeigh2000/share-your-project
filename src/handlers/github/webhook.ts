@@ -10,7 +10,6 @@ import { getBranchName, isBranch } from "../../github/discord/embeds";
 import { formatReleaseEvent } from "../../github/discord/releases";
 import { returnStatus } from "../../util/http";
 import { importOauthKey } from "../../encrypter";
-import { MessageFlags } from "discord-api-types/v10";
 
 export async function handler(
     request: Request,

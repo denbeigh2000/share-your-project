@@ -8,6 +8,113 @@ import { createOAuthUserAuth } from "@octokit/auth-oauth-user";
 import { StateStore } from "../../stateStore";
 import { importOauthKey } from "../../encrypter";
 
+type RequestType = "invalid" | "post_installation" | "post_oauth";
+
+type RequestParams = OauthRequestParams | InstallationRequestParams | InvalidRequestParams;
+
+interface OauthRequestParams {
+    requestType: "post_oauth";
+    code: string;
+    state: string;
+};
+
+interface InstallationRequestParams {
+    requestType: "post_installation";
+    code: string;
+    installationId: string;
+};
+
+interface InvalidRequestParams {
+    requestType: "invalid";
+}
+
+function getRequestParams(rawParams: URLSearchParams): RequestParams {
+    const state = rawParams.get("state") || undefined;
+    const code = rawParams.get("code");
+    const installationId = rawParams.get("installation_id");
+    if (installationId && code)
+        return { requestType: "post_installation", code, installationId };
+    if (state && code)
+        return { requestType: "post_oauth", code, state };
+
+    return { requestType: "invalid" };
+}
+
+interface AuthParams {
+    clientId: string,
+    clientSecret: string,
+    code: string,
+    state?: string,
+}
+
+interface AuthReturn {
+    octokit: Octokit,
+    token: string,
+}
+
+async function handleAuth(params: AuthParams): Promise<AuthReturn> {
+    const auth = createOAuthUserAuth(params);
+    const { token } = await auth();
+
+    const { clientId, clientSecret } = params;
+    const octokit = new Octokit({
+        authStrategy: createOAuthUserAuth,
+        auth: {
+            clientId,
+            clientSecret,
+            token,
+            clientType: "oauth-app",
+        },
+    });
+
+    return { octokit, token };
+}
+
+async function handlePostInstallation(env: Env, { installationId, code }: InstallationRequestParams): Promise<Response> {
+    const { octokit, token } = await handleAuth({
+        clientId: env.GITHUB_CLIENT_ID,
+        clientSecret: env.GITHUB_CLIENT_SECRET,
+        code,
+    });
+
+    // TODO: we need to confirm what is given here when we register an org
+    const { data: userData } = await octokit.request("GET /user");
+
+    const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
+    const store = new Store(env.USER_DB, key);
+
+    // TODO: we need to confirm that the provided insstallation id is actually
+    // the one that corresponds to our installation
+    // TODO: implementation
+    await store.updateInstallationToken(userData.id, token);
+    return returnStatus(200, "Github application installed, you can now link your Discord account");
+}
+
+async function handlePostOauth(env: Env, { state, code }: OauthRequestParams): Promise<Response> {
+    const stateStore = new StateStore(env.OAUTH);
+    const discordID = await stateStore.get(state);
+    if (!discordID)
+        return returnStatus(400, "Error");
+
+    const { octokit, token } = await handleAuth({
+        clientId: env.GITHUB_CLIENT_ID,
+        clientSecret: env.GITHUB_CLIENT_SECRET,
+        code,
+        state,
+    });
+
+    const { data: userData } = await octokit.request("GET /user");
+    const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
+    const store = new Store(env.USER_DB, key);
+
+    // await store.upsertEntity(userData.id, discordID);
+    // await store.updateCode(userData.id, token);
+    // TODO: implement this
+    await store.upsertOauthGrant(userData.id, discordID, token);
+    return returnStatus(200, "Discord account linked, you can now share projects");
+
+}
+
 export async function handler(
     request: Request,
     env: Env,
@@ -19,53 +126,14 @@ export async function handler(
     });
 
     const url = new URL(request.url);
-    const state = url.searchParams.get("state") || undefined;
-    const code = url.searchParams.get("code");
-    const installationId = url.searchParams.get("installation_id");
 
-    if (!code)
-        return returnStatus(400, "Bad request");
-
-    let discordID = undefined;
-    if (state) {
-        // This is a discord account link
-        const stateStore = new StateStore(env.OAUTH);
-        discordID = await stateStore.get(state);
-        if (!discordID)
-            return returnStatus(400, "Error");
-    } else if (!installationId)
-        return returnStatus(400, "Error");
-
-    const auth = createOAuthUserAuth({
-        clientId: env.GITHUB_CLIENT_ID,
-        clientSecret: env.GITHUB_CLIENT_SECRET,
-        code,
-        state,
-    });
-    const { token } = await auth();
-
-    const octokit = new Octokit({
-        authStrategy: createOAuthUserAuth,
-        auth: {
-            clientId: env.CLIENT_ID,
-            clientSecret: env.GITHUB_CLIENT_SECRET,
-            token,
-            clientType: "oauth-app",
-        },
-    });
-
-    const { data: userData } = await octokit.request("GET /user");
-    const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
-    const store = new Store(env.USER_DB, key);
-    if (discordID) {
-        await store.upsertEntity(userData.id, discordID);
-        await store.updateCode(userData.id, token);
-        return returnStatus(200, "Discord account linked, you can now share projects");
-    } else {
-        // NOTE: we already confirmed installationId was truthy above, in the
-        // else block after confirming the state
-        await store.updateCode(userData.id, token);
-        return returnStatus(200, "Github application installed, you can now link your Discord account");
+    const params = getRequestParams(url.searchParams);
+    switch (params.requestType) {
+        case "post_installation":
+            return handlePostInstallation(env, params);
+        case "post_oauth":
+            return handlePostOauth(env, params);
+        default:
+            return returnStatus(400, "Bad request");
     }
-
 }
