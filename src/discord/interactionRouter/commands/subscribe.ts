@@ -149,7 +149,6 @@ export const handler = async (
 ): Promise<(APIInteractionResponse | null)> => {
 
     const callback = async () => {
-
         const msg = await handleInner(client, interaction, env, sentry);
 
         const { application_id: applicationId, token } = interaction;
