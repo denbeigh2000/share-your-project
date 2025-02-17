@@ -76,7 +76,9 @@ const handleInner = async (
 
     const repo = reposResp.data;
 
+    const { data: user } = await octokitUser.request("GET /user");
     const installation = await store.findInstallation(repo.owner.id);
+
     if (!installation)
         return reply(`The ${repo.owner.type} ${repo.owner.login} does not have this application installed`);
 
@@ -89,6 +91,19 @@ const handleInner = async (
         },
     });
 
+    if (repo.owner.type !== "User") {
+        const p = {
+            owner: repo.owner.login,
+            repo: repo.name,
+            username: user.login,
+        };
+        const { data } = await octokitInstall.request("GET /repos/{owner}/{repo}/collaborators/{username}/permission", p);
+
+        const permissions = data.user?.permissions;
+        if (!permissions || !(permissions.pull || permissions.push || permissions.maintain || permissions.admin))
+            return reply("You do not have sufficient org privileges to do this");
+    }
+
     let visibleRepos
     try {
         visibleRepos = await octokitInstall.paginate("GET /installation/repositories");
@@ -99,7 +114,7 @@ const handleInner = async (
 
     const targetRepo = visibleRepos.find(r => r.id === repo.id);
     if (!targetRepo)
-        return reply("That repo exists, isn't exposed to this application");
+        return reply("That repo exists, but isn't exposed to this application");
 
     await store.upsertSub(repo.id, grant.githubID, repo.default_branch, defaultBranchOnly);
 
