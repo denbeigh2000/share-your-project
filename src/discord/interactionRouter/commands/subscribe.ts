@@ -123,7 +123,7 @@ const handleInner = async (
 
     // Now that we've confirmed that the user has reasonable permissions to do
     // so, create our subscription.
-    await store.upsertSub(repo.id, grant.githubID, repo.default_branch, defaultBranchOnly);
+    await store.upsertSub(repo.id, installation.githubID, repo.default_branch, defaultBranchOnly);
 
     if (!quiet)
         try {
