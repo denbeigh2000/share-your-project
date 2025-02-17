@@ -10,8 +10,10 @@ import {
 import { Env } from "../../../env";
 import { BotClient } from "../../client/bot";
 import { Store } from "../../../store";
-import { commonOptions, getGrantAndRepo, getOpts } from "./subunsub/util";
+import { commonOptions, getOpts, ghStatusResponse, reply } from "./subunsub/util";
 import { importOauthKey } from "../../../encrypter";
+import { createOAuthUserAuth } from "@octokit/auth-oauth-user";
+import { Octokit } from "octokit";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "unsubscribe",
@@ -20,36 +22,42 @@ export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
 };
 
 const handleInner = async (
-    client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-): Promise<void> => {
+): Promise<RESTPatchAPIInteractionFollowupJSONBody> => {
     const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
     const store = new Store(env.USER_DB, key);
 
-    const { member } = interaction;
+    const { member, data: { options } } = interaction;
 
-    const { options } = interaction.data;
+    const grant = await store.findOauthGrant(member.user.id);
+    if (!grant)
+        return reply("No associated Github account found for your user. Try running `/link`");
+
     if (!options) throw "missing options";
     const { owner, repoName } = getOpts(options);
-    let msg: RESTPatchAPIInteractionFollowupJSONBody;
-    try {
-        const { repo } = await getGrantAndRepo(env, store, owner, repoName, member.user.id);
-        await store.removeSub(repo.id);
+    const octokitUser = new Octokit({
+        authStrategy: createOAuthUserAuth,
+        auth: {
+            clientId: env.GITHUB_CLIENT_ID,
+            clientSecret: env.GITHUB_CLIENT_SECRET,
+            token: grant.oauthToken,
+            clientType: "oauth-app",
+        },
+    });
 
-        // TODO: design embeds etc
-        msg = {
-            content: `OK, no longer sending updates from ${owner}/${repoName} to <#${env.PUBLISH_CHANNEL_ID}>`,
-        };
-    } catch (e) {
-        const errorMsg = (e as string) || "an unknown error occurred";
-        msg = {
-            content: `Failed to unsubscribe: ${errorMsg}`,
-        };
-    }
+    const { data: repo, status } = await octokitUser.request("GET /repos/{owner}/{repo}", {
+        owner,
+        repo: repoName,
+    });
 
-    const { application_id: applicationId, token } = interaction;
-    await client.editFollowup(applicationId, token, msg);
+    if (status !== 200)
+        return reply(ghStatusResponse(status));
+
+    await store.removeSub(repo.id);
+    return {
+        content: `OK, no longer sending updates from ${owner}/${repoName} to <#${env.PUBLISH_CHANNEL_ID}>`,
+    };
 }
 
 export const handler = async (
@@ -58,7 +66,14 @@ export const handler = async (
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
 ): Promise<(APIInteractionResponse | null)> => {
-    ctx.waitUntil(handleInner(client, interaction, env));
+    const callback = async () => {
+        const msg = await handleInner(interaction, env);
+
+        const { application_id: applicationId, token } = interaction;
+        await client.editFollowup(applicationId, token, msg);
+    };
+
+    ctx.waitUntil(callback());
     return {
         type: InteractionResponseType.DeferredChannelMessageWithSource,
         data: { flags: MessageFlags.Ephemeral },

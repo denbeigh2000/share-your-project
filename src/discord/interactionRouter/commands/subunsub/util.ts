@@ -1,10 +1,4 @@
-import { Endpoints } from "@octokit/types";
-
-import { APIApplicationCommandInteractionDataOption, ApplicationCommandOptionType, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
-import { OauthGrant, Store } from "../../../../store";
-import { Env } from "../../../../env";
-import { Octokit } from "octokit";
-import { createOAuthUserAuth } from "@octokit/auth-app";
+import { APIApplicationCommandInteractionDataOption, ApplicationCommandOptionType, RESTPatchAPIInteractionFollowupJSONBody, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
 
 export const commonOptions: RESTPostAPIChatInputApplicationCommandsJSONBody['options'] = [
     {
@@ -21,41 +15,20 @@ export const commonOptions: RESTPostAPIChatInputApplicationCommandsJSONBody['opt
     },
 ]
 
-type listUserReposResponse = Endpoints["GET /repos/{owner}/{repo}"]["response"];
-
-export interface GrantAndRepo {
-    grant: OauthGrant,
-    repo: listUserReposResponse["data"],
+export function reply(msg: string): RESTPatchAPIInteractionFollowupJSONBody {
+    const content = `Error: ${msg}`;
+    return { content };
 }
 
-export async function getGrantAndRepo(env: Env, store: Store, owner: string, repo: string, discordID: string): Promise<GrantAndRepo> {
-    const grant = await store.findOauthGrant(discordID);
-    if (!grant)
-        throw "No associated Github account found for your user. Try running `/link`";
-
-    const octokitUser = new Octokit({
-        authStrategy: createOAuthUserAuth,
-        auth: {
-            clientId: env.GITHUB_CLIENT_ID,
-            clientSecret: env.GITHUB_CLIENT_SECRET,
-            token: grant.oauthToken,
-            clientType: "oauth-app",
-        },
-    });
-
-    const { status, data } = await octokitUser.request("GET /repos/{owner}/{repo}", {
-        owner,
-        repo
-    });
-
-    if (status === 200)
-        return { grant, repo: data }
-    else if (status >= 400 && status < 500)
-        throw "Either this repo doesn't exist, or you don't have read permissions for it.";
+export function ghStatusResponse(status: number): string {
+    if (status >= 400 && status < 500)
+        return "Either this repo doesn't exist, or you don't have read permissions for it.";
     else if (status >= 500 && status < 600)
-        throw `Github returned error code ${status}, try again later(?)`;
-    else
-        throw `Unhandled status code ${status} from Github`;
+        return `Github returned error code ${status}, try again later(?)`;
+    else if (status !== 200)
+        return `Unhandled status code ${status} from Github`;
+
+    return "OK";
 }
 
 export interface Opts {

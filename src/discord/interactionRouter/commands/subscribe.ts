@@ -11,9 +11,11 @@ import {
 import { Env } from "../../../env";
 import { BotClient } from "../../client/bot";
 import { Store } from "../../../store";
-import { commonOptions, getGrantAndRepo, getOpts } from "./subunsub/util";
+import { commonOptions, getOpts, ghStatusResponse, reply } from "./subunsub/util";
 import { importOauthKey } from "../../../encrypter";
 import { Sentry } from "../../../sentry";
+import { Octokit } from "octokit";
+import { createAppAuth, createOAuthUserAuth } from "@octokit/auth-app";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "subscribe",
@@ -50,18 +52,54 @@ const handleInner = async (
     if (!options) throw "missing options";
     const { owner, repoName, defaultBranchOnly, quiet } = getOpts(options);
 
-    let grant, repo;
-    try {
-        const data = await getGrantAndRepo(env, store, owner, repoName, member.user.id);
-        grant = data.grant;
-        repo = data.repo;
-        await store.upsertSub(repo.id, grant.githubID, repo.default_branch, defaultBranchOnly);
-    } catch (e) {
-        const errorMsg = (e as string) || "an unknown error occurred";
-        return {
-            content: `Failed to subscribe: ${errorMsg}`,
-        };
-    }
+    const grant = await store.findOauthGrant(member.user.id);
+    if (!grant)
+        return reply("No associated Github account found for your user. Try running `/link`");
+
+    const octokitUser = new Octokit({
+        authStrategy: createOAuthUserAuth,
+        auth: {
+            clientId: env.GITHUB_CLIENT_ID,
+            clientSecret: env.GITHUB_CLIENT_SECRET,
+            token: grant.oauthToken,
+            clientType: "oauth-app",
+        },
+    });
+
+    const reposResp = await octokitUser.request("GET /repos/{owner}/{repo}", {
+        owner,
+        repo: repoName,
+    });
+
+    if (reposResp.status !== 200)
+        return reply(ghStatusResponse(reposResp.status));
+
+    const repo = reposResp.data;
+
+    const installation = await store.findInstallation(repo.owner.login);
+    if (!installation)
+        return reply(`The ${repo.owner.type} ${repo.owner.login} does not have this application installed`);
+
+    const octokitInstall = new Octokit({
+        authStrategy: createAppAuth,
+        auth: {
+            appId: env.GITHUB_APP_ID,
+            privateKey: env.GITHUB_PRIVATE_KEY,
+            installationId: installation.githubInstallationID,
+        },
+    });
+
+    const visibleReposResp = await octokitInstall.request("GET /installation/repositories");
+    if (visibleReposResp.status !== 200)
+        // TODO: this gives a bad msg for 4xx
+        return reply(ghStatusResponse(visibleReposResp.status));
+
+    const visibleRepos = visibleReposResp.data;
+    const targetRepo = visibleRepos.repositories.find(r => r.id === repo.id);
+    if (!targetRepo)
+        return reply("That repo exists, isn't exposed to this application");
+
+    await store.upsertSub(repo.id, grant.githubID, repo.default_branch, defaultBranchOnly);
 
     if (repo && !quiet)
         try {
@@ -73,8 +111,6 @@ const handleInner = async (
         } catch (e) {
             sentry.captureException(e);
         }
-
-
     return {
         content: `OK, updates from ${owner}/${repoName} will be sent to <#${env.PUBLISH_CHANNEL_ID}>`,
     };
