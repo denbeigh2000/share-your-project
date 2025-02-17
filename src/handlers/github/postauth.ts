@@ -8,8 +8,6 @@ import { createOAuthUserAuth } from "@octokit/auth-oauth-user";
 import { StateStore } from "../../stateStore";
 import { importOauthKey } from "../../encrypter";
 
-type RequestType = "invalid" | "post_installation" | "post_oauth";
-
 type RequestParams = OauthRequestParams | InstallationRequestParams | InvalidRequestParams;
 
 interface OauthRequestParams {
@@ -70,7 +68,7 @@ async function handleAuth(params: AuthParams): Promise<AuthReturn> {
     return { octokit, token };
 }
 
-async function handlePostInstallation(env: Env, { installationId, code }: InstallationRequestParams): Promise<Response> {
+async function handlePostInstallation(env: Env, { code }: InstallationRequestParams): Promise<Response> {
     const { octokit, token } = await handleAuth({
         clientId: env.GITHUB_CLIENT_ID,
         clientSecret: env.GITHUB_CLIENT_SECRET,
