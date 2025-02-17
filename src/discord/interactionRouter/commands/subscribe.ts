@@ -52,6 +52,9 @@ const handleInner = async (
     if (!options) throw "missing options";
     const { owner, repoName, defaultBranchOnly, quiet } = getOpts(options);
 
+    // Get the user's token, so we can get details about the requested
+    // repository. If we 404/fail here, we shouldn't allow subscription
+    // (because the user can't see the repo!)
     const grant = await store.findOauthGrant(member.user.id);
     if (!grant)
         return reply("No associated Github account found for your user. Try running `/link`");
@@ -76,7 +79,6 @@ const handleInner = async (
 
     const repo = reposResp.data;
 
-    const { data: user } = await octokitUser.request("GET /user");
     const installation = await store.findInstallation(repo.owner.id);
 
     if (!installation)
@@ -91,34 +93,39 @@ const handleInner = async (
         },
     });
 
+    // If the repo is not owned by a user, confirm that the user has
+    // read permissions (at minimum) on this repo.
     if (repo.owner.type !== "User") {
-        const p = {
+        const { data: user } = await octokitUser.request("GET /user");
+        const { data } = await octokitInstall.request("GET /repos/{owner}/{repo}/collaborators/{username}/permission", {
             owner: repo.owner.login,
             repo: repo.name,
             username: user.login,
-        };
-        const { data } = await octokitInstall.request("GET /repos/{owner}/{repo}/collaborators/{username}/permission", p);
+        });
 
         const permissions = data.user?.permissions;
         if (!permissions || !(permissions.pull || permissions.push || permissions.maintain || permissions.admin))
             return reply("You do not have sufficient org privileges to do this");
+    } else {
+        // Confirm this repo is one that has actually been exposed to the
+        // application. We only have to do this in the case of user-owned
+        // repos, because org-owned repos will fail on the check above where we
+        // try to fetch collaborator permissions for that repo.
+        try {
+            const visibleRepos = await octokitInstall.paginate("GET /installation/repositories");
+            if (!visibleRepos.find(r => r.id === repo.id))
+                return reply("That repo either doesn't exist, or isn't exposed to this application");
+        } catch (e) {
+            // TODO: we probably want to capture these messages better ourselves?
+            return reply(`${e}`);
+        }
     }
 
-    let visibleRepos
-    try {
-        visibleRepos = await octokitInstall.paginate("GET /installation/repositories");
-    } catch (e) {
-        // TODO: we probably want to capture these messages better ourselves?
-        return reply(`${e}`);
-    }
-
-    const targetRepo = visibleRepos.find(r => r.id === repo.id);
-    if (!targetRepo)
-        return reply("That repo exists, but isn't exposed to this application");
-
+    // Now that we've confirmed that the user has reasonable permissions to do
+    // so, create our subscription.
     await store.upsertSub(repo.id, grant.githubID, repo.default_branch, defaultBranchOnly);
 
-    if (repo && !quiet)
+    if (!quiet)
         try {
             await client.createMessage(env.PUBLISH_CHANNEL_ID, {
                 content: `
