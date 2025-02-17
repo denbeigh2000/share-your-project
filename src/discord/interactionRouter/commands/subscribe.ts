@@ -93,10 +93,10 @@ const handleInner = async (
         },
     });
 
+    const { data: user } = await octokitUser.request("GET /user");
     // If the repo is not owned by a user, confirm that the user has
     // read permissions (at minimum) on this repo.
     if (repo.owner.type !== "User") {
-        const { data: user } = await octokitUser.request("GET /user");
         const { data } = await octokitInstall.request("GET /repos/{owner}/{repo}/collaborators/{username}/permission", {
             owner: repo.owner.login,
             repo: repo.name,
@@ -107,6 +107,10 @@ const handleInner = async (
         if (!permissions || !(permissions.pull || permissions.push || permissions.maintain || permissions.admin))
             return reply("You do not have sufficient org privileges to do this");
     } else {
+        // Confirm the requester owns this repo.
+        if (user.id !== repo.owner.id)
+            return reply("You are not the owner of this repo.");
+
         // Confirm this repo is one that has actually been exposed to the
         // application. We only have to do this in the case of user-owned
         // repos, because org-owned repos will fail on the check above where we
