@@ -11,8 +11,9 @@ import {
 import { Env } from "../../../env";
 import { BotClient } from "../../client/bot";
 import { Store } from "../../../store";
-import { commonOptions, getEntityAndRepo, getOpts } from "./subunsub/util";
+import { commonOptions, getGrantAndRepo, getOpts } from "./subunsub/util";
 import { importOauthKey } from "../../../encrypter";
+import { Sentry } from "../../../sentry";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "subscribe",
@@ -38,7 +39,8 @@ const handleInner = async (
     client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-): Promise<void> => {
+    sentry: Sentry,
+): Promise<RESTPatchAPIInteractionFollowupJSONBody> => {
     const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
     const store = new Store(env.USER_DB, key);
 
@@ -46,36 +48,36 @@ const handleInner = async (
 
     const { options } = interaction.data;
     if (!options) throw "missing options";
-    const { owner, repoName, defaultBranchOnly } = getOpts(options);
+    const { owner, repoName, defaultBranchOnly, quiet } = getOpts(options);
 
-    let msg: RESTPatchAPIInteractionFollowupJSONBody;
-    let entity, repo;
-    let successful = false;
+    let grant, repo;
     try {
-        const data = await getEntityAndRepo(env, store, owner, repoName, member.user.id);
-        entity = data.entity;
+        const data = await getGrantAndRepo(env, store, owner, repoName, member.user.id);
+        grant = data.grant;
         repo = data.repo;
-
-        await store.upsertSub(repo.id, entity.githubID, repo.default_branch, defaultBranchOnly);
-        successful = true;
-        msg = {
-            content: `OK, updates from ${owner}/${repoName} will be sent to <#${env.PUBLISH_CHANNEL_ID}>`,
-        };
+        await store.upsertSub(repo.id, grant.githubID, repo.default_branch, defaultBranchOnly);
     } catch (e) {
         const errorMsg = (e as string) || "an unknown error occurred";
-        msg = {
+        return {
             content: `Failed to subscribe: ${errorMsg}`,
         };
     }
 
-    const { application_id: applicationId, token } = interaction;
-    await client.editFollowup(applicationId, token, msg);
-    if (repo && successful)
-        await client.createMessage(env.PUBLISH_CHANNEL_ID, {
-            content: `
+    if (repo && !quiet)
+        try {
+            await client.createMessage(env.PUBLISH_CHANNEL_ID, {
+                content: `
 <@${interaction.member.user.id}> has started publishing updates from [${repo.name}](${repo.html_url})! :balloon:
 `,
-        });
+            });
+        } catch (e) {
+            sentry.captureException(e);
+        }
+
+
+    return {
+        content: `OK, updates from ${owner}/${repoName} will be sent to <#${env.PUBLISH_CHANNEL_ID}>`,
+    };
 }
 
 export const handler = async (
@@ -83,8 +85,18 @@ export const handler = async (
     client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
+    sentry: Sentry,
 ): Promise<(APIInteractionResponse | null)> => {
-    ctx.waitUntil(handleInner(client, interaction, env));
+
+    const callback = async () => {
+
+        const msg = await handleInner(client, interaction, env, sentry);
+
+        const { application_id: applicationId, token } = interaction;
+        await client.editFollowup(applicationId, token, msg);
+    };
+    ctx.waitUntil(callback());
+
     return {
         type: InteractionResponseType.DeferredChannelMessageWithSource,
         data: { flags: MessageFlags.Ephemeral },

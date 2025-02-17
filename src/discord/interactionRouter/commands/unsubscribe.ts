@@ -10,7 +10,7 @@ import {
 import { Env } from "../../../env";
 import { BotClient } from "../../client/bot";
 import { Store } from "../../../store";
-import { commonOptions, getEntityAndRepo, getOpts } from "./subunsub/util";
+import { commonOptions, getGrantAndRepo, getOpts } from "./subunsub/util";
 import { importOauthKey } from "../../../encrypter";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
@@ -34,7 +34,7 @@ const handleInner = async (
     const { owner, repoName } = getOpts(options);
     let msg: RESTPatchAPIInteractionFollowupJSONBody;
     try {
-        const { repo } = await getEntityAndRepo(env, store, owner, repoName, member.user.id);
+        const { repo } = await getGrantAndRepo(env, store, owner, repoName, member.user.id);
         await store.removeSub(repo.id);
 
         // TODO: design embeds etc
