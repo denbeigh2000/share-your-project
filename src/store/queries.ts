@@ -16,6 +16,11 @@ export interface SubResult {
     is_default_branch_only: boolean,
 }
 
+export interface FindInstallationResult {
+    id: number,
+    installation_id: number,
+}
+
 export const upsertOauthGrant = `
     INSERT INTO ${OAUTH_GRANTS_TABLE} (id, discord_id, encrypted_token, iv)
     VALUES (?, ?, ?, ?)
@@ -59,9 +64,10 @@ export const deleteSubscription = `
     WHERE repo_id = ?;
 `;
 
-export const addInstallation = `
-    INSERT INTO ${GITHUB_ENTITIES_TABLE} (id, installation_id, encrypted_token, token_iv)
-    VALUES (?, ?, NULL, NULL);
+export const findInstallation = `
+    SELECT id, installation_id
+    FROM ${INSTALLATIONS_TABLE}
+    WHERE id = ?;
 `;
 
 export const deleteInstallation = `

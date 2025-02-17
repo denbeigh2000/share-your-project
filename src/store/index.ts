@@ -1,5 +1,5 @@
 import { Encrypter, iv } from "../encrypter";
-import { addInstallation, addSubscription, deleteInstallation, deleteSubscription, findSubForRepo, GHEntityResult, selectGHEntitiesForDiscordUser as selectOauthGrantsForDiscordUser, SubResult, updateKey, upsertInstallation, upsertOauthGrant } from "./queries";
+import { addSubscription, deleteInstallation, deleteSubscription, findInstallation, FindInstallationResult, findSubForRepo, OAuthGrantResult, selectGHEntitiesForDiscordUser as selectOauthGrantsForDiscordUser, SubResult, updateKey, upsertInstallation, upsertOauthGrant } from "./queries";
 
 export interface OauthGrant {
     discordID: string,
@@ -10,7 +10,6 @@ export interface OauthGrant {
 export interface Installation {
     githubID: number,
     githubInstallationID: number,
-    oauthToken: string | null,
 }
 
 export interface Subscription {
@@ -32,10 +31,7 @@ export class Store {
         const iv_ = iv();
         const encryptedToken = await this.encrypter.encrypt(iv_, token);
 
-        // TODO: this query needs to be changed to insert into an
-        // oauth-specific table
         const stmt = this.db.prepare(upsertOauthGrant).bind(githubID, discordID, encryptedToken, iv_);
-
         const { error } = await stmt.run();
         if (error)
             throw error;
@@ -112,8 +108,17 @@ export class Store {
             throw error;
     }
 
-    async findInstallation(_githubID: string): Promise<Installation | null> {
-        throw "basketball";
+    async findInstallation(githubID: string): Promise<Installation | null> {
+        const stmt = this.db.prepare(findInstallation).bind(githubID);
+
+        const results = await stmt.first<FindInstallationResult>();
+        if (!results)
+            return null;
+
+        return {
+            githubID: results.id,
+            githubInstallationID: results.installation_id,
+        }
     }
 
     async removeInstallation(ghInstallationId: number): Promise<void> {
