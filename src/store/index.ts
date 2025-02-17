@@ -1,8 +1,13 @@
 import { Encrypter, iv } from "../encrypter";
-import { addInstallation, addSubscription, deleteInstallation, deleteSubscription, findSubForRepo, GHEntityResult, selectGHEntitiesForDiscordUser, SubResult, updateKey, upsertGithubEntity } from "./queries";
+import { addInstallation, addSubscription, deleteInstallation, deleteSubscription, findSubForRepo, GHEntityResult, selectGHEntitiesForDiscordUser as selectOauthGrantsForDiscordUser, SubResult, updateKey, upsertInstallation, upsertOauthGrant } from "./queries";
 
-export interface Entity {
+export interface OauthGrant {
     discordID: string,
+    githubID: number,
+    oauthToken: string,
+}
+
+export interface Installation {
     githubID: number,
     githubInstallationID: number,
     oauthToken: string | null,
@@ -23,45 +28,39 @@ export class Store {
         this.encrypter = new Encrypter(key);
     }
 
-    async upsertEntity(githubID: number, discordID: string): Promise<void> {
-        const stmt = this.db.prepare(upsertGithubEntity).bind(githubID, discordID);
+    async upsertOauthGrant(githubID: number, discordID: string, token: string): Promise<void> {
+        const iv_ = iv();
+        const encryptedToken = await this.encrypter.encrypt(iv_, token);
+
+        // TODO: this query needs to be changed to insert into an
+        // oauth-specific table
+        const stmt = this.db.prepare(upsertOauthGrant).bind(githubID, discordID, encryptedToken, iv_);
 
         const { error } = await stmt.run();
         if (error)
             throw error;
     }
 
-    async findEntities(discordID: string): Promise<Entity[]> {
-        const stmt = this.db.prepare(selectGHEntitiesForDiscordUser).bind(discordID);
+    async findOauthGrant(discordID: string): Promise<OauthGrant | null> {
+        const stmt = this.db.prepare(selectOauthGrantsForDiscordUser).bind(discordID);
 
-        const { error, results } = await stmt.all<GHEntityResult>();
+        const { error, results } = await stmt.all<OAuthGrantResult>();
         if (error)
             throw error;
 
         if (!results || !results[0])
-            return [];
+            return null;
 
-        const items = [];
-        for (let i = 0; i < results.length; i++) {
-            const r = results[i];
-            let oauthToken = null;
-            if (r.encrypted_token && r.token_iv) {
-                const encrypted = new Uint8Array(r.encrypted_token);
-                const iv = new Uint8Array(r.token_iv);
-                oauthToken = await this.encrypter.decrypt(encrypted, iv);
-            }
+        const r = results[0];
+        const encrypted = new Uint8Array(r.encrypted_token);
+        const iv = new Uint8Array(r.token_iv);
+        const oauthToken = await this.encrypter.decrypt(encrypted, iv);
 
-            items.push({
-                discordID,
-                githubID: r.github_id,
-                githubInstallationID: r.installation_id,
-                oauthToken,
-            });
-        }
-
-        console.log(items);
-
-        return items;
+        return {
+            discordID,
+            githubID: r.github_id,
+            oauthToken,
+        };
     }
 
     async upsertSub(
@@ -105,12 +104,16 @@ export class Store {
 
     async addInstallation(ghUserId: number, ghInstallationId: number): Promise<void> {
         const stmt = this.db
-            .prepare(addInstallation)
+            .prepare(upsertInstallation)
             .bind(ghUserId, ghInstallationId);
 
         const { error } = await stmt.run();
         if (error)
             throw error;
+    }
+
+    async findInstallation(_githubID: string): Promise<Installation | null> {
+        throw "basketball";
     }
 
     async removeInstallation(ghInstallationId: number): Promise<void> {
@@ -123,7 +126,7 @@ export class Store {
             throw error;
     }
 
-    async updateCode(ghUserId: number, token: string): Promise<void> {
+    async updateInstallationToken(ghUserId: number, token: string): Promise<void> {
         const iv_ = iv();
         const encryptedToken = await this.encrypter.encrypt(iv_, token);
         const stmt = this.db.prepare(updateKey).bind(encryptedToken, iv_, ghUserId);

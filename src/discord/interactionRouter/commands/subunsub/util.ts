@@ -1,7 +1,7 @@
 import { Endpoints } from "@octokit/types";
 
 import { APIApplicationCommandInteractionDataOption, ApplicationCommandOptionType, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
-import { Entity, Store } from "../../../../store";
+import { OauthGrant, Store } from "../../../../store";
 import { Env } from "../../../../env";
 import { Octokit } from "octokit";
 import { createAppAuth } from "@octokit/auth-app";
@@ -24,12 +24,12 @@ export const commonOptions: RESTPostAPIChatInputApplicationCommandsJSONBody['opt
 type listUserReposResponse = Endpoints["GET /repos/{owner}/{repo}"]["response"];
 
 export interface EntityAndRepo {
-    entity: Entity,
+    entity: OauthGrant,
     repo: listUserReposResponse["data"],
 }
 
 export async function getEntityAndRepo(env: Env, store: Store, owner: string, repo: string, discordID: string): Promise<EntityAndRepo> {
-    const entities = await store.findEntities(discordID);
+    const entities = await store.findOauthGrants(discordID);
     if (!entities)
         throw "No associated Github account found for your user. Try running `/link`";
 
