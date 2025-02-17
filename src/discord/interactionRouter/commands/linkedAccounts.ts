@@ -15,8 +15,8 @@ import { importOauthKey } from "../../../encrypter";
 import { createOAuthUserAuth } from "@octokit/auth-app";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
-    name: "linked-accounts",
-    description: "View the Github users/orgs linked to your account",
+    name: "linked-account",
+    description: "View the Github user linked to your account",
 };
 
 function formatOrg(user: Endpoints["GET /user"]["response"]["data"]): string {
@@ -33,50 +33,35 @@ const handleInner = async (
     const userId = interaction.member.user.id;
     const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
     const store = new Store(env.USER_DB, key);
-    const entities = await store.findEntities(userId);
+    const grant = await store.findOauthGrant(userId);
 
     const appId = env.GITHUB_APP_ID;
     const privateKey = env.GITHUB_PRIVATE_KEY;
 
-    const ents = [];
-    for (const ent of entities) {
-        const installationId = ent.githubInstallationID;
-        const token = ent.oauthToken;
+    let content;
+    if (!grant)
+        content = "No linked account found. Run `/setup` to get started";
+    else {
+        const { oauthToken } = grant;
         const octokit = new Octokit({
             authStrategy: createOAuthUserAuth,
             auth: {
                 appId,
                 privateKey,
-                installationId,
-                token,
+                oauthToken,
                 type: "oauth-user",
             },
         });
         const { status, data } = await octokit.request("GET /user");
-        // TODO: improve 4xx/5xx handling
-        if (status !== 200) throw `bad status ${status}`;
-        ents.push(data);
-    }
-
-    let content;
-    switch (ents.length) {
-        case 0: {
-            content = "No linked accounts found. Run `/setup` to get started";
-            break;
-        }
-
-        case 1: {
-            const e = ents[0];
-            content = `Found one linked ${e.type}: ${formatOrg(e)}`;
-            break;
-        }
-
-        default: {
-            const entityMessage = ents.map(e => `- ${formatOrg(e)} (${e.type})`).join("\n");
-            content = `
-${ents.length} linked accounts:
-${entityMessage}
-`;
+        if (status === 200) {
+            content = `Linked account: ${formatOrg(data)}`;
+        } else if (status >= 400 && status < 500) {
+            console.error("error fetching user", data);
+            content = "permission expired, try /unlink?";
+        } else if (status >= 500 && status < 600) {
+            content = `github appears to be down right now (status ${status})`;
+        } else {
+            content = `unhandled error: github status ${status}`;
         }
     }
 
