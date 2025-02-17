@@ -18,7 +18,7 @@ export function getRouter(env: Env, sentry: Sentry): InteractionRouter {
     router.registerCommand("setup", setupHandler, setupDesc);
     router.registerCommand("link", linkHandler, linkDesc);
     router.registerCommand("unlink", unlinkHandler, unlinkDesc);
-    router.registerCommand("linked-accounts", linkedAccountsHandler, linkedAccountsDesc);
+    router.registerCommand("linked-account", linkedAccountsHandler, linkedAccountsDesc);
     router.registerCommand("subscribe", subscribeHandler, subscribeDesc);
     router.registerCommand("unsubscribe", unsubscribeHandler, unsubscribeDesc);
     router.registerCommand("about", aboutHandler, aboutDesc);

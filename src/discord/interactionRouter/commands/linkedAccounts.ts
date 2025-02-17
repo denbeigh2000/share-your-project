@@ -46,9 +46,9 @@ const handleInner = async (
         const octokit = new Octokit({
             authStrategy: createOAuthUserAuth,
             auth: {
-                appId,
-                privateKey,
-                oauthToken,
+                clientId: env.GITHUB_CLIENT_ID,
+                clientSecret: env.GITHUB_CLIENT_SECRET,
+                token: oauthToken,
                 type: "oauth-user",
             },
         });

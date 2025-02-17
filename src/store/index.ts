@@ -1,5 +1,17 @@
 import { Encrypter, iv } from "../encrypter";
-import { addSubscription, deleteInstallation, deleteSubscription, findInstallation, FindInstallationResult, findSubForRepo, OAuthGrantResult, selectGHEntitiesForDiscordUser as selectOauthGrantsForDiscordUser, SubResult, updateKey, upsertInstallation, upsertOauthGrant } from "./queries";
+import {
+    addSubscription,
+    deleteInstallation,
+    deleteSubscription,
+    findInstallation,
+    FindInstallationResult,
+    findSubForRepo,
+    OAuthGrantResult,
+    selectOauthGrantsForDiscordUser,
+    SubResult,
+    upsertInstallation,
+    upsertOauthGrant,
+} from "./queries";
 
 export interface OauthGrant {
     discordID: string,
@@ -108,7 +120,7 @@ export class Store {
             throw error;
     }
 
-    async findInstallation(githubID: string): Promise<Installation | null> {
+    async findInstallation(githubID: number): Promise<Installation | null> {
         const stmt = this.db.prepare(findInstallation).bind(githubID);
 
         const results = await stmt.first<FindInstallationResult>();
@@ -129,13 +141,5 @@ export class Store {
         const { error } = await stmt.run();
         if (error)
             throw error;
-    }
-
-    async updateInstallationToken(ghUserId: number, token: string): Promise<void> {
-        const iv_ = iv();
-        const encryptedToken = await this.encrypter.encrypt(iv_, token);
-        const stmt = this.db.prepare(updateKey).bind(encryptedToken, iv_, ghUserId);
-        const { error } = await stmt.run();
-        if (error) throw error;
     }
 }

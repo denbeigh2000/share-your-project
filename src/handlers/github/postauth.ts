@@ -69,23 +69,19 @@ async function handleAuth(params: AuthParams): Promise<AuthReturn> {
 }
 
 async function handlePostInstallation(env: Env, { code }: InstallationRequestParams): Promise<Response> {
-    const { octokit, token } = await handleAuth({
+    const { octokit } = await handleAuth({
         clientId: env.GITHUB_CLIENT_ID,
         clientSecret: env.GITHUB_CLIENT_SECRET,
         code,
     });
 
-    // TODO: we need to confirm what is given here when we register an org
-    const { data: userData } = await octokit.request("GET /user");
+    // We don't actually do anything here, AFAIK (this is just to ensure that
+    // our code is legit)
+    const { data: userData, status } = await octokit.request("GET /user");
+    if (status !== 200)
+        return returnStatus(401, "bad code");
 
-    const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
-    const store = new Store(env.USER_DB, key);
-
-    // TODO: we need to confirm that the provided insstallation id is actually
-    // the one that corresponds to our installation
-    // TODO: implementation
-    await store.updateInstallationToken(userData.id, token);
-    return returnStatus(200, "Github application installed, you can now link your Discord account");
+    return returnStatus(200, `Github application installed for ${userData.login}, you can now link your Discord account`);
 }
 
 async function handlePostOauth(env: Env, { state, code }: OauthRequestParams): Promise<Response> {
@@ -105,12 +101,8 @@ async function handlePostOauth(env: Env, { state, code }: OauthRequestParams): P
     const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
     const store = new Store(env.USER_DB, key);
 
-    // await store.upsertEntity(userData.id, discordID);
-    // await store.updateCode(userData.id, token);
-    // TODO: implement this
     await store.upsertOauthGrant(userData.id, discordID, token);
     return returnStatus(200, "Discord account linked, you can now share projects");
-
 }
 
 export async function handler(

@@ -13,7 +13,7 @@ function generateState(): string {
     // This needs to be cast to a normal Array, even though the specific typed
     // arrays have .map() methods, the chars are just all '0'
     const vals = Array.from(seed);
-    return btoa(vals.map(c => String.fromCharCode(c)).join(""));
+    return btoa(vals.map(c => String.fromCharCode(c)).join("")).replace('+', '.');
 }
 
 export interface StateData {

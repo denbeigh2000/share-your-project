@@ -7,9 +7,25 @@ CREATE TABLE oauth_grants (
     token_iv        BLOB    NOT NULL
 );
 
+CREATE INDEX idx_oauth_grants_discord_id
+    ON oauth_grants (discord_id);
+
 CREATE TABLE app_installations (
     id              INTEGER PRIMARY KEY,
     installation_id INTEGER NOT NULL
+);
+
+-- functionally the same, but adds a constraint on the new table
+CREATE TABLE subscriptions (
+    repo_id                 INTEGER PRIMARY KEY,
+    owner_gh_id             INTEGER NOT NULL,
+    default_branch          TEXT    NOT NULL,
+    is_default_branch_only  INTEGER NOT NULL,
+
+    CONSTRAINT fk_repo_subscriptions_github_entities
+        FOREIGN KEY (owner_gh_id)
+            REFERENCES app_installations (id)
+            ON DELETE CASCADE
 );
 
 INSERT INTO oauth_grants
@@ -23,5 +39,13 @@ INSERT INTO app_installations
     SELECT id, installation_id
     FROM github_entities;
 
-DROP TABLE github_entities;
-DROP TABLE github_to_discord;
+INSERT INTO subscriptions
+    SELECT repo_id, owner_gh_id, default_branch, is_default_branch_only
+    FROM subscriptions;
+
+-- these must/should be dropped when applying in prod, but committed as
+-- comments. leaving them uncommented seems to make localdev have problems when
+-- querying tables at runtime.
+-- DROP TABLE github_entities;
+-- DROP TABLE github_to_discord;
+-- DROP TABLE repo_subscriptions;

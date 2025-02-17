@@ -76,7 +76,7 @@ const handleInner = async (
 
     const repo = reposResp.data;
 
-    const installation = await store.findInstallation(repo.owner.login);
+    const installation = await store.findInstallation(repo.owner.id);
     if (!installation)
         return reply(`The ${repo.owner.type} ${repo.owner.login} does not have this application installed`);
 
@@ -89,13 +89,15 @@ const handleInner = async (
         },
     });
 
-    const visibleReposResp = await octokitInstall.request("GET /installation/repositories");
-    if (visibleReposResp.status !== 200)
-        // TODO: this gives a bad msg for 4xx
-        return reply(ghStatusResponse(visibleReposResp.status));
+    let visibleRepos
+    try {
+        visibleRepos = await octokitInstall.paginate("GET /installation/repositories");
+    } catch (e) {
+        // TODO: we probably want to capture these messages better ourselves?
+        return reply(`${e}`);
+    }
 
-    const visibleRepos = visibleReposResp.data;
-    const targetRepo = visibleRepos.repositories.find(r => r.id === repo.id);
+    const targetRepo = visibleRepos.find(r => r.id === repo.id);
     if (!targetRepo)
         return reply("That repo exists, isn't exposed to this application");
 
