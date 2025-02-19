@@ -17,6 +17,13 @@ export interface FindInstallationResult {
     installation_id: number,
 }
 
+export interface OAuthGrantResult {
+    github_id: number,
+    discord_id: string,
+    encrypted_token: Uint8Array,
+    token_iv: Uint8Array,
+}
+
 export const upsertOauthGrant = `
     INSERT INTO ${OAUTH_GRANTS_TABLE} (id, discord_id, encrypted_token, token_iv)
     VALUES (?, ?, ?, ?)
@@ -24,6 +31,12 @@ export const upsertOauthGrant = `
         SET discord_id = excluded.discord_id,
             encrypted_token = excluded.encrypted_token,
             token_iv = excluded.token_iv;
+`;
+
+export const deleteOauthGrant = `
+    DELETE FROM ${OAUTH_GRANTS_TABLE}
+    WHERE discord_id = ?
+    RETURNING
 `;
 
 export const upsertInstallation = `
@@ -37,13 +50,6 @@ export const selectOauthGrantForDiscordUser = `
     FROM ${OAUTH_GRANTS_TABLE}
     WHERE discord_id = ?;
 `;
-
-export interface OAuthGrantResult {
-    github_id: number,
-    discord_id: string,
-    encrypted_token: Uint8Array,
-    token_iv: Uint8Array,
-}
 
 export const selectOauthGrantsForDiscordUser = `
     SELECT id AS github_id, discord_id, encrypted_token, token_iv

@@ -2,6 +2,7 @@ import { Encrypter, iv } from "../encrypter";
 import {
     addSubscription,
     deleteInstallation,
+    deleteOauthGrant,
     deleteSubscription,
     findInstallation,
     FindInstallationResult,
@@ -68,6 +69,22 @@ export class Store {
             githubID: r.github_id,
             oauthToken,
         };
+    }
+
+    async deleteOauthGrant(discordID: string): Promise<OauthGrant | null> {
+        const stmt = this.db.prepare(deleteOauthGrant).bind(discordID);
+        const result = await stmt.first<OAuthGrantResult>();
+        if (!result)
+            return null
+
+        const encrypted = new Uint8Array(result.encrypted_token);
+        const iv = new Uint8Array(result.token_iv);
+        const oauthToken = await this.encrypter.decrypt(encrypted, iv);
+        return {
+            discordID,
+            githubID: result.github_id,
+            oauthToken
+        }
     }
 
     async upsertSub(

@@ -4,6 +4,7 @@ import { Store } from "../../../store";
 import { Octokit } from "octokit";
 import { BotClient } from "../../client/bot";
 import { importOauthKey } from "../../../encrypter";
+import { createOAuthUserAuth } from "@octokit/auth-app";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "unlink",
@@ -27,40 +28,44 @@ export const handler = async (
     const userId = interaction.member.user.id;
     const key = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
     const store = new Store(env.USER_DB, key);
-    const entities = await store.findEntities(userId);
+    const grant = await store.deleteOauthGrant(userId);
 
-    const appId = env.GITHUB_APP_ID;
-    const privateKey = env.GITHUB_PRIVATE_KEY;
-
-    const opt = interaction.data.options!.find(e => e.name === "name");
-    if (!opt) throw "missing `name` option in /unlink";
-    if (opt.type !== ApplicationCommandOptionType.String) throw `/unlink name option has bad type ${opt.type}`;
-
-    for (const entity of entities) {
-        const installationId = entity.githubInstallationID;
-        const octokit = new Octokit({ appId, privateKey, installationId });
-        const { status, data } = await octokit.request("GET /user");
-
-        // TODO: improve this error handling - maybe we should remove this
-        // entry?
-        if (status !== 200) throw `failed to fetch for GH user ${entity.githubID}`;
-        if (data.name === opt.value) {
-            await store.removeInstallation(installationId);
-            return {
-                type: InteractionResponseType.ChannelMessageWithSource,
-                data: {
-                    content: `OK, unlinked account ${opt.value}`,
-                    flags: MessageFlags.Ephemeral,
-                }
+    if (!grant)
+        return {
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: {
+                content: "Did not find linked account",
+                flags: MessageFlags.Ephemeral & MessageFlags.Urgent,
             }
         }
-    }
 
+    const { oauthToken: token } = grant;
+    const octokit = new Octokit({
+        authStrategy: createOAuthUserAuth,
+        auth: {
+            clientId: env.GITHUB_CLIENT_ID,
+            clientSecret: env.GITHUB_CLIENT_ID,
+            token,
+            clientType: "oauth-app",
+        },
+    });
+
+    const { data: user } = await octokit.request("GET /user");
+    await octokit.request("DELETE /applications/{client_id}/grant", {
+        client_id: env.GITHUB_CLIENT_ID,
+        access_token: token,
+    });
+
+    const name = user.name || user.login;
+    const userLink = `[${name}](${user.html_url})`
     return {
         type: InteractionResponseType.ChannelMessageWithSource,
         data: {
-            content: `Did not find linked account for ${opt.value}`,
-            flags: MessageFlags.Ephemeral & MessageFlags.Urgent,
+            content: `Successfully unlinked ${userLink} from this account, run \`/link\` to link a new one.
+
+-# NOTE: this does not stop push notifications!
+`,
+            flags: MessageFlags.Ephemeral,
         }
     }
 }
